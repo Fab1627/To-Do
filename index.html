@@ -1130,8 +1130,8 @@
       opt("➡️", "Tomorrow", tmr),
       opt("🛋️", "This weekend", sat),
       opt("🗓️", "Next week", mon),
-      fieldRow("date", t.due || "", "", (v) => { const d = validDue(v); if (d) patch(t, dueFields(t, d)); }),
-      { icon: "🚫", label: "No date", checked: !t.due, run: () => patch(t, dueFields(t, null)) }
+      { icon: "🚫", label: "No date", checked: !t.due, run: () => patch(t, dueFields(t, null)) },
+      fieldRow("date", t.due || "", "", (v) => { const d = validDue(v); if (d) patch(t, dueFields(t, d)); })
     ];
   }
   function timeItems(t) {
