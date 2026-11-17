@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
+<meta name="app-build" content="20261117195208">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -289,6 +290,17 @@
   .linkbtn { border: none; background: none; color: var(--muted); text-decoration: underline; padding: 4px; font-size: 14px; }
   .linkbtn:hover { color: var(--ink); }
   #done { margin-top: 8px; }
+  .update-bar {
+    position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 80;
+    display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px);
+    background: var(--accent); color: #fff; border-radius: 14px; padding: 10px 10px 10px 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 15px; animation: sheetUp .2s ease-out;
+  }
+  .update-bar { width: max-content; }
+  .update-bar span { white-space: nowrap; }
+  .update-bar button { border: none; border-radius: 10px; font: inherit; cursor: pointer; }
+  #updateGo { background: #fff; color: var(--accent); font-weight: 700; padding: 7px 14px; }
+  .update-x { background: transparent; color: #fff; opacity: .8; padding: 6px 8px; }
   .hdr-right { display: inline-flex; align-items: center; gap: 10px; }
   .bell {
     position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
@@ -533,6 +545,11 @@
   </div>
 </main>
 
+<div class="update-bar" id="updateBar" role="status" hidden>
+  <span>🔄 An update is available.</span>
+  <button type="button" id="updateGo">Refresh</button>
+  <button type="button" class="update-x" id="updateX" aria-label="Dismiss">✕</button>
+</div>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="Notification settings">
   <div class="drawer-head">
@@ -2252,6 +2269,34 @@
     }
   }
   setInterval(autoFinishExams, 60000);
+
+  // ---- "An update is available" banner ----
+  // Each release changes the app-build tag. While the app is open it checks the live
+  // copy every 2 minutes (and when you come back to it); if the tag changed, it asks to refresh.
+  (() => {
+    const meta = document.querySelector('meta[name="app-build"]');
+    const mine = meta && meta.content;
+    if (!mine || mine === "BUILD" || !/^https?:/.test(location.protocol)) return;
+    let shown = false, dismissedFor = null;
+    async function check() {
+      if (shown || document.hidden) return;
+      try {
+        const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
+        if (!r.ok) return;
+        const m = /<meta name="app-build" content="([^"]+)"/.exec(await r.text());
+        if (m && m[1] !== mine && m[1] !== dismissedFor) {
+          shown = true;
+          $("updateBar").hidden = false;
+          $("updateX").onclick = () => { $("updateBar").hidden = true; dismissedFor = m[1]; shown = false; };
+        }
+      } catch (e) {}
+    }
+    $("updateGo").addEventListener("click", () => location.reload());
+    setInterval(check, 120000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+    addEventListener("focus", check);
+    setTimeout(check, 15000);
+  })();
 
   render();
   initDictation();
