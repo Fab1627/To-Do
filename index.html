@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117200730">
+<meta name="app-build" content="20261117204242">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -358,6 +358,8 @@
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
   .code-input { text-align: center; font-size: 30px !important; letter-spacing: 10px; font-variant-numeric: tabular-nums; }
   .code-input::placeholder { letter-spacing: 10px; opacity: .35; }
+  .remember { display: flex; align-items: center; gap: 10px; font-size: 16px; color: var(--ink); cursor: pointer; padding: 2px 2px 4px; user-select: none; }
+  .remember input { width: 22px; height: 22px; accent-color: var(--accent); flex: none; margin: 0; cursor: pointer; }
   .pw-wrap { position: relative; display: flex; }
   .pw-wrap input { flex: 1; min-width: 0; padding-right: 56px; }
   .pw-eye {
@@ -525,6 +527,10 @@
         <svg class="eye-off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
       </button>
     </div>
+    <label class="remember">
+      <input type="checkbox" id="rememberMe" checked>
+      <span>Stay signed in on this device</span>
+    </label>
     <button type="submit" class="add" id="authBtn">Sign in</button>
     <p class="auth-msg" id="authMsg"></p>
     <p class="auth-switch"><span id="authSwitchText">New here?</span> <button type="button" class="linkbtn" id="authSwitch">Create an account</button></p>
@@ -1948,7 +1954,22 @@
   const SUPABASE_URL = "https://fdypsglmqidxuxbefrow.supabase.co";
   const SUPABASE_KEY = "sb_publishable_1k44gbz-BceIJUIi9obGxA_T4B9igIG";
   const GOOGLE_CLIENT_ID = "785179050215-u494hb6qgp6fo20crkk76het1o739tme.apps.googleusercontent.com";
-  const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  // "Stay signed in on this device": checked → sign-in is kept on this device;
+  // unchecked → it lives only until the app/tab is closed.
+  const REMEMBER_KEY = "todo.remember";
+  const remembering = () => { try { return localStorage.getItem(REMEMBER_KEY) !== "0"; } catch (e) { return true; } };
+  const safe = (fn) => { try { return fn(); } catch (e) { return null; } };
+  const authStorage = {
+    getItem: (k) => safe(() => sessionStorage.getItem(k)) ?? safe(() => localStorage.getItem(k)),
+    setItem: (k, v) => {
+      if (remembering()) { safe(() => localStorage.setItem(k, v)); safe(() => sessionStorage.removeItem(k)); }
+      else { safe(() => sessionStorage.setItem(k, v)); safe(() => localStorage.removeItem(k)); }
+    },
+    removeItem: (k) => { safe(() => localStorage.removeItem(k)); safe(() => sessionStorage.removeItem(k)); }
+  };
+  const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { storage: authStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+  }) : null;
 
   // app field  <->  database column
   const FIELD = {
@@ -2241,6 +2262,10 @@
       msg.textContent = ""; msg.classList.remove("err");
     };
     $("authSwitch").addEventListener("click", () => setMode(mode === "in" ? "up" : "in"));
+    $("rememberMe").checked = remembering();
+    $("rememberMe").addEventListener("change", () => {
+      try { localStorage.setItem(REMEMBER_KEY, $("rememberMe").checked ? "1" : "0"); } catch (e) {}
+    });
 
     // Google / Apple buttons appear once each sign-in method is switched on in Supabase.
     fetch(SUPABASE_URL + "/auth/v1/settings", { headers: { apikey: SUPABASE_KEY } })
