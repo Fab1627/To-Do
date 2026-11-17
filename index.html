@@ -280,10 +280,13 @@
   #done { margin-top: 8px; }
   .who { font-size: 13px; color: var(--muted); margin-top: 4px; }
   .auth {
-    margin-top: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    margin: 12vh auto 0; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
     padding: 22px; display: flex; flex-direction: column; gap: 10px; max-width: 380px;
   }
-  .auth h2 { margin: 0; font-size: 20px; }
+  .auth h2 { margin: 0; font-size: 20px; text-align: center; }
+  .auth-sub, .auth-msg, .auth-switch { text-align: center; }
+  /* While signed out, center the title above the sign-in card */
+  body.signed-out header { justify-content: center; }
   .auth-sub { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
   .auth input {
     border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: transparent;
@@ -1375,6 +1378,7 @@
     started = true;
     const uid = session.user.id;
     $("auth").hidden = true;
+    document.body.classList.remove("signed-out");
     $("app").hidden = false;
     $("who").hidden = false;
     $("whoEmail").textContent = session.user.email || "";
@@ -1463,7 +1467,7 @@
     });
     sb.auth.getSession().then(({ data }) => {
       if (data.session) startList(data.session);
-      else authForm.hidden = false;
+      else { authForm.hidden = false; document.body.classList.add("signed-out"); }
     });
   }
 
