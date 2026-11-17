@@ -342,6 +342,8 @@
   .oauth-btn:hover { border-color: var(--muted); }
   .or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; margin: 4px 0; }
   .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .code-input { text-align: center; font-size: 30px !important; letter-spacing: 10px; font-variant-numeric: tabular-nums; }
+  .code-input::placeholder { letter-spacing: 10px; opacity: .35; }
   .pw-wrap { position: relative; display: flex; }
   .pw-wrap input { flex: 1; min-width: 0; padding-right: 56px; }
   .pw-eye {
@@ -454,6 +456,19 @@
     <button type="submit" class="add" id="authBtn">Sign in</button>
     <p class="auth-msg" id="authMsg"></p>
     <p class="auth-switch"><span id="authSwitchText">New here?</span> <button type="button" class="linkbtn" id="authSwitch">Create an account</button></p>
+  </form>
+
+  <form class="auth" id="codeForm" hidden autocomplete="off">
+    <h2>Check your email ✉️</h2>
+    <p class="auth-sub">We sent a code to <b id="codeEmail"></b>.<br>Copy it from the email and paste it here.</p>
+    <input type="text" id="codeInput" class="code-input" inputmode="numeric" autocomplete="one-time-code"
+      pattern="[0-9]*" maxlength="10" placeholder="123456" aria-label="Verification code" required>
+    <button type="submit" class="add" id="codeBtn">Verify</button>
+    <p class="auth-msg" id="codeMsg"></p>
+    <p class="auth-switch">
+      <button type="button" class="linkbtn" id="codeResend">Send a new code</button> ·
+      <button type="button" class="linkbtn" id="codeBack">Use a different email</button>
+    </p>
   </form>
   <div id="app" hidden>
 
@@ -1936,6 +1951,7 @@
     started = true;
     const uid = session.user.id;
     $("auth").hidden = true;
+    $("codeForm").hidden = true;
     document.body.classList.remove("signed-out");
     $("app").hidden = false;
     $("who").hidden = false;
@@ -2030,15 +2046,17 @@
       try {
         if (mode === "in") {
           const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error && /not confirmed/i.test(error.message || "")) {
+            // Account exists but was never verified: send a fresh code.
+            await sb.auth.resend({ type: "signup", email });
+            showCodeStep(email);
+            return;
+          }
           if (error) throw error;
         } else {
           const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
           if (error) throw error;
-          if (!data.session) {
-            msg.textContent = "Check your email to confirm your account, then sign in here.";
-            setTimeout(() => setMode("in"), 0);
-            setTimeout(() => { msg.textContent = "Check your email to confirm your account, then sign in here."; }, 10);
-          }
+          if (!data.session) showCodeStep(email);
         }
       } catch (err) {
         msg.classList.add("err");
@@ -2051,6 +2069,49 @@
         $("authBtn").disabled = false;
       }
     });
+    // ---- verification code step ----
+    let codeFor = "";
+    function showCodeStep(email) {
+      codeFor = email;
+      $("codeEmail").textContent = email;
+      $("codeInput").value = ""; $("codeMsg").textContent = ""; $("codeMsg").classList.remove("err");
+      authForm.hidden = true; $("codeForm").hidden = false;
+      setTimeout(() => $("codeInput").focus(), 50);
+    }
+    $("codeInput").addEventListener("input", () => {
+      const v = $("codeInput").value.replace(/\D/g, "").slice(0, 10);
+      if (v !== $("codeInput").value) $("codeInput").value = v;
+    });
+    $("codeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const token = $("codeInput").value.replace(/\D/g, "");
+      const cm = $("codeMsg");
+      if (token.length < 6) { cm.classList.add("err"); cm.textContent = "Enter the full code from the email."; return; }
+      $("codeBtn").disabled = true; cm.classList.remove("err"); cm.textContent = "Checking…";
+      try {
+        let { error } = await sb.auth.verifyOtp({ email: codeFor, token, type: "signup" });
+        if (error) ({ error } = await sb.auth.verifyOtp({ email: codeFor, token, type: "email" }));
+        if (error) throw error;
+        cm.textContent = "Verified ✓";
+      } catch (err) {
+        cm.classList.add("err");
+        const m = String((err && err.message) || "");
+        cm.textContent = /expired|invalid|token/i.test(m)
+          ? "That code doesn't match or has expired. Check the newest email, or tap “Send a new code”."
+          : m || "Couldn't verify. Try again.";
+      } finally { $("codeBtn").disabled = false; }
+    });
+    $("codeResend").addEventListener("click", async () => {
+      const cm = $("codeMsg");
+      cm.classList.remove("err"); cm.textContent = "Sending a new code…";
+      const { error } = await sb.auth.resend({ type: "signup", email: codeFor });
+      if (error) { cm.classList.add("err"); cm.textContent = /rate|seconds/i.test(error.message || "") ? "Please wait a minute before asking for another code." : "Couldn't send a new code. Try again soon."; }
+      else cm.textContent = "New code sent ✓ Check your email (and Spam).";
+    });
+    $("codeBack").addEventListener("click", () => {
+      $("codeForm").hidden = true; authForm.hidden = false; setMode("up");
+    });
+
     $("signOut").addEventListener("click", async () => {
       await sb.auth.signOut();
       location.reload();
