@@ -1400,6 +1400,22 @@
     return isoOf(dt);
   }
 
+  const NUM_WORDS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, "a couple of": 2, "a couple": 2, couple: 2, "a few": 3, few: 3 };
+  const NUM_RE = "(\\d{1,3}|a couple of|a couple|a few|couple|few|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)";
+  const toNum = (w) => /^\d+$/.test(w) ? Number(w) : (NUM_WORDS[w.toLowerCase()] || 1);
+  function addUnits(n, unit) {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    if (/^day/i.test(unit)) d.setDate(d.getDate() + n);
+    else if (/^week/i.test(unit)) d.setDate(d.getDate() + 7 * n);
+    else if (/^month/i.test(unit)) { const day = d.getDate(); d.setDate(1); d.setMonth(d.getMonth() + n); d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate())); }
+    else if (/^year/i.test(unit)) d.setFullYear(d.getFullYear() + n);
+    return isoOf(d);
+  }
+  function exactDate(y, m, d) {
+    const dt = new Date(y, m, d);
+    return dt.getMonth() === m ? isoOf(dt) : null;
+  }
+
   // Pull a date out of the text. Returns {due, text} with the date words removed.
   function takeDate(text) {
     // "Friday's exam" / "tomorrow's quiz": take the date, keep the sentence ("the exam").
@@ -1411,9 +1427,22 @@
     }
     const pre = "(?:\\b(?:due|by|on|before|for|this|until)\\s+)?";
     const tries = [
+      [new RegExp(pre + "\\b(?:the\\s+)?day after (?:tomorrow|tmrw)\\b", "i"), () => plusDays(2)],
+      // "a week from today", "2 weeks from now", "three days later", "a month from today"
+      [new RegExp(pre + "\\b(?:in\\s+)?" + NUM_RE + "\\s+(days?|weeks?|months?|years?)\\s+(?:from\\s+(?:now|today|tonight)|later|out)\\b", "i"), (m) => addUnits(toNum(m[1]), m[2])],
+      // "in 3 days", "in a week", "in two weeks", "within a month"
+      [new RegExp(pre + "\\b(?:in|within)\\s+" + NUM_RE + "\\s+(days?|weeks?|months?|years?)\\b", "i"), (m) => addUnits(toNum(m[1]), m[2])],
+      [new RegExp(pre + "\\bnext month\\b", "i"), () => addUnits(1, "month")],
+      [new RegExp(pre + "\\bnext year\\b", "i"), () => addUnits(1, "year")],
+      [new RegExp(pre + "\\b(?:the\\s+)?end of (?:the |this )?month\\b", "i"), () => { const d = new Date(); return isoOf(new Date(d.getFullYear(), d.getMonth() + 1, 0)); }],
+      // "November 10th, 2027" / "Nov 10 2027"
+      [new RegExp(pre + "\\b" + MON_RE + "\\.? (\\d{1,2})(?:st|nd|rd|th)?,? (\\d{4})\\b", "i"), (m) => exactDate(Number(m[3]), monthIdx(m[1]), Number(m[2]))],
+      // "11/10/2027" or "11/10/27"
+      [new RegExp(pre + "\\b(\\d{1,2})/(\\d{1,2})/(\\d{2}|\\d{4})\\b"), (m) => exactDate(m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]), Number(m[1]) - 1, Number(m[2]))],
+      // "2026-12-07"
+      [new RegExp(pre + "\\b(\\d{4})-(\\d{2})-(\\d{2})\\b"), (m) => exactDate(Number(m[1]), Number(m[2]) - 1, Number(m[3]))],
       [new RegExp(pre + "\\b(today|tonight|this evening|this afternoon)\\b", "i"), () => plusDays(0)],
       [new RegExp(pre + "\\b(tomorrow|tmrw|tmr)\\b", "i"), () => plusDays(1)],
-      [new RegExp(pre + "\\bday after tomorrow\\b", "i"), () => plusDays(2)],
       [new RegExp(pre + "\\bin (\\d{1,2}) days?\\b", "i"), (m) => plusDays(Number(m[1]))],
       [new RegExp(pre + "\\bin a week\\b", "i"), () => plusDays(7)],
       [new RegExp(pre + "\\b(?:the )?end of (?:the |this )?week\\b", "i"), () => nextWeekday(5)],
@@ -1507,7 +1536,7 @@
   function splitTasks(raw) {
     const lead = "(?:then\\s+|also\\s+)?(?:i\\s+(?:need|have)\\s+to\\s+|remind me to\\s+|add\\s+)?";
     const andVerb = new RegExp("\\s+(?:and|also|plus)\\s+(?:also\\s+)?(?=" + lead + "(?:" + VERBS + ")\\b)", "i");
-    return raw.split(/\s*(?:\n|;|\.\s+|,\s*(?:and\s+|then\s+)?(?=\S))\s*/)
+    return raw.split(/\s*(?:\n|;|\.\s+|,(?!\s*\d{4}\b)\s*(?:and\s+|then\s+)?(?=\S))\s*/)
       .flatMap(p => p.split(andVerb))
       .map(p => p.trim())
       .filter(Boolean);
