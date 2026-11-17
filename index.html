@@ -290,6 +290,19 @@
     border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: transparent;
     color: var(--ink); font-size: 19px;
   }
+  .pw-wrap { position: relative; display: flex; }
+  .pw-wrap input { flex: 1; min-width: 0; padding-right: 56px; }
+  .pw-eye {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    width: 42px; height: 42px; border: none; background: transparent; color: var(--muted);
+    border-radius: 10px; display: grid; place-items: center; cursor: pointer;
+    touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  .pw-eye:hover { color: var(--ink); background: var(--bg); }
+  .pw-eye .eye-open { display: none; }
+  .pw-eye.showing { color: var(--accent); }
+  .pw-eye.showing .eye-open { display: block; }
+  .pw-eye.showing .eye-off { display: none; }
   .auth .add { padding: 16px; font-size: 19px; border-radius: 14px; }
   .auth-msg { min-height: 22px; margin: 0; font-size: 16px; color: var(--muted); }
   .auth-msg.err { color: var(--warn); }
@@ -318,7 +331,13 @@
     <h2 id="authTitle">Sign in</h2>
     <p class="auth-sub" id="authSub">Your list is private to your account.</p>
     <input type="email" id="authEmail" placeholder="Email" autocomplete="email" required>
-    <input type="password" id="authPass" placeholder="Password (6+ characters)" autocomplete="current-password" minlength="6" required>
+    <div class="pw-wrap">
+      <input type="password" id="authPass" placeholder="Password (6+ characters)" autocomplete="current-password" minlength="6" required>
+      <button type="button" class="pw-eye" id="pwEye" aria-label="Hold to show password" title="Hold to show password">
+        <svg class="eye-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        <svg class="eye-off" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
     <button type="submit" class="add" id="authBtn">Sign in</button>
     <p class="auth-msg" id="authMsg"></p>
     <p class="auth-switch"><span id="authSwitchText">New here?</span> <button type="button" class="linkbtn" id="authSwitch">Create an account</button></p>
@@ -1435,6 +1454,24 @@
       msg.textContent = ""; msg.classList.remove("err");
     };
     $("authSwitch").addEventListener("click", () => setMode(mode === "in" ? "up" : "in"));
+
+    // Hold the eye to see the password; let go and it hides again.
+    const eye = $("pwEye"), pass = $("authPass");
+    const show = (on) => {
+      pass.type = on ? "text" : "password";
+      eye.classList.toggle("showing", on);
+      eye.setAttribute("aria-label", on ? "Showing password" : "Hold to show password");
+    };
+    eye.addEventListener("pointerdown", (e) => {
+      e.preventDefault();               // keep the cursor in the password box
+      try { eye.setPointerCapture(e.pointerId); } catch (er) {}
+      show(true);
+    });
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) eye.addEventListener(ev, () => show(false));
+    eye.addEventListener("contextmenu", (e) => e.preventDefault());
+    eye.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); show(true); } });
+    eye.addEventListener("keyup", (e) => { if (e.key === " " || e.key === "Enter") show(false); });
+    eye.addEventListener("blur", () => show(false));
     authForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const email = $("authEmail").value.trim(), password = $("authPass").value;
