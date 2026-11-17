@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117195208">
+<meta name="app-build" content="20261117195443">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -432,6 +432,55 @@
   .toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .toast button { border: none; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; padding: 4px; }
   @media (prefers-color-scheme: dark) { .toast button { color: #2f6df6; } }
+  /* ---- color themes ---- */
+  @media (prefers-color-scheme: light) {
+    :root[data-theme="green"] { --bg: #f1f7f2; --line: #dbe8de; --accent: #1f8a4c; --date-bg: #e2f3e8; --date-ink: #1d6b3d; }
+    :root[data-theme="blue"] { --bg: #f0f5fc; --line: #d9e3f2; --accent: #2563eb; --date-bg: #e0eaff; --date-ink: #1e40af; }
+    :root[data-theme="red"] { --bg: #fcf2f2; --line: #f0dada; --accent: #d4313b; --date-bg: #fde3e3; --date-ink: #a1232b; }
+    :root[data-theme="purple"] { --bg: #f6f2fc; --line: #e4dcf2; --accent: #7c3aed; --date-bg: #ede4ff; --date-ink: #5b21b6; }
+    :root[data-theme="pink"] { --bg: #fdf2f7; --line: #f1dbe6; --accent: #db2777; --date-bg: #fce1ee; --date-ink: #9d174d; }
+    :root[data-theme="orange"] { --bg: #fdf6ee; --line: #f0e2d2; --accent: #ea6c0a; --date-bg: #fde9d6; --date-ink: #9a4108; }
+    :root[data-theme="teal"] { --bg: #eff8f8; --line: #d6e9e7; --accent: #0d9488; --date-bg: #d9f2ef; --date-ink: #0f6e66; }
+  }
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="green"] { --bg: #0f1612; --card: #16201a; --line: #24342a; --accent: #34c27a; --date-bg: #183a26; --date-ink: #9be5bb; }
+    :root[data-theme="blue"] { --bg: #0e1420; --card: #151d2b; --line: #233049; --accent: #5b8cff; --date-bg: #1d2b4d; --date-ink: #b8c9ff; }
+    :root[data-theme="red"] { --bg: #180f10; --card: #221617; --line: #3a2426; --accent: #ff5a63; --date-bg: #4a1d21; --date-ink: #ffc0c4; }
+    :root[data-theme="purple"] { --bg: #130f1c; --card: #1c1628; --line: #2f2642; --accent: #a78bfa; --date-bg: #2e2050; --date-ink: #d9c9ff; }
+    :root[data-theme="pink"] { --bg: #1a0f15; --card: #24161e; --line: #3d2532; --accent: #f472b6; --date-bg: #4a1c33; --date-ink: #ffc4de; }
+    :root[data-theme="orange"] { --bg: #18120c; --card: #221a12; --line: #3a2c1e; --accent: #fb923c; --date-bg: #4a2a12; --date-ink: #ffd2a8; }
+    :root[data-theme="teal"] { --bg: #0c1716; --card: #12201f; --line: #1f3533; --accent: #2dd4bf; --date-bg: #123b37; --date-ink: #a5f0e6; }
+  }
+  :root[data-theme="light"] {
+    --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #77756e; --line: #e6e3db; --accent: #2f6df6;
+    --done: #9b9890; --warn: #c2410c; --date-bg: #eef2ff; --date-ink: #3346a8;
+    --hi: #dc2626; --hi-bg: #fdecec; --md: #a16207; --md-bg: #fef9c3; --lo: #15803d; --lo-bg: #dcfce7;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --bg: #141414; --card: #1d1d1d; --ink: #f1f0ec; --muted: #9a988f; --line: #2e2e2c; --accent: #5b8cff;
+    --done: #6d6b65; --warn: #fb923c; --date-bg: #23294a; --date-ink: #b8c9ff;
+    --hi: #f87171; --hi-bg: #3a1d1d; --md: #facc15; --md-bg: #3a3410; --lo: #4ade80; --lo-bg: #12301d;
+    color-scheme: dark;
+  }
+  :root[data-theme="midnight"] {
+    --bg: #0b0d12; --card: #141822; --ink: #e8ebf2; --muted: #8b93a7; --line: #232a38; --accent: #7aa2ff;
+    --done: #5d6475; --date-bg: #1d2740; --date-ink: #bccdff; --warn: #fb923c;
+    --hi: #f87171; --hi-bg: #3a1d1d; --md: #facc15; --md-bg: #3a3410; --lo: #4ade80; --lo-bg: #12301d;
+    color-scheme: dark;
+  }
+  .theme-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    display: grid; place-items: center; cursor: pointer; font-size: 19px; padding: 0;
+  }
+  .theme-btn:hover { border-color: var(--muted); }
+  .theme-dot { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0,0,0,.08); vertical-align: middle; }
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 6px 2px 10px; }
+  .emoji-grid button {
+    font-size: 24px; line-height: 1; padding: 8px 0; border: none; border-radius: 10px; background: transparent; cursor: pointer;
+  }
+  .emoji-grid button:hover, .emoji-grid button:active { background: var(--bg); }
+  .emoji-grid button.on { background: var(--date-bg); box-shadow: inset 0 0 0 2px var(--accent); }
   .hint { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
 </head>
@@ -441,6 +490,7 @@
     <h1>To-Do</h1>
     <span class="hdr-right">
       <span class="count" id="count"></span>
+      <button type="button" class="theme-btn" id="themeBtn" title="Theme" aria-label="Change theme">🎨</button>
       <button type="button" class="bell" id="bellBtn" title="Notifications" aria-label="Notification settings" hidden>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
         <span class="bell-dot" id="bellDot" hidden></span>
@@ -492,7 +542,7 @@
       <button type="button" class="mic" id="mic" title="Speak a task" aria-label="Speak a task" hidden>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>
       </button>
-      <textarea id="input" rows="1" placeholder="Add a task… e.g. “thermo HW Friday”" aria-label="New task" enterkeyhint="done"></textarea>
+      <textarea id="input" rows="1" placeholder="Add a task…" aria-label="New task" enterkeyhint="done"></textarea>
       <button type="submit" class="add" id="addBtn" disabled>Add</button>
     </div>
     <div class="row2">
@@ -625,6 +675,22 @@
   const clearDone = $("clearDone"), countEl = $("count"), dueIn = $("dueIn");
   const prioSeg = $("prioSeg"), viewSeg = $("viewSeg");
 
+  // Your look settings: color theme + any tag emojis you picked yourself.
+  const UI_KEY = "todo.ui";
+  let ui = { theme: "classic", emojis: {} };
+  try { const saved = JSON.parse(localStorage.getItem(UI_KEY) || "{}"); ui = { ...ui, ...saved, emojis: { ...(saved.emojis || {}) } }; } catch (e) {}
+  function applyTheme() {
+    const r = document.documentElement;
+    if (!ui.theme || ui.theme === "classic") delete r.dataset.theme; else r.dataset.theme = ui.theme;
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) tc.content = getComputedStyle(r).getPropertyValue("--bg").trim() || "#f6f5f1";
+  }
+  function saveUi() {
+    try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (e) {}
+    if (typeof saveUiRemote === "function") saveUiRemote(ui);
+  }
+  applyTheme();
+
   const BASE_TAGS = ["Exams", "Classes", "Job", "Personal", "Pet"];
   // Emoji for a tag: exact name first, then any word in it, then a word that starts the same.
   const TAG_EMOJI = {
@@ -658,7 +724,8 @@
     phone: "📱", apps: "📱", email: "📧", emails: "📧", calls: "📞", call: "📞", admin: "🗃️", paperwork: "🗃️", documents: "🗃️", forms: "📋", appointments: "📅", appointment: "📅",
     goals: "🎯", goal: "🎯", ideas: "💡", idea: "💡", habits: "✅", habit: "✅", urgent: "🚨", important: "⭐", someday: "🌈", misc: "🗂️", other: "🗂️", random: "🎲", learning: "🧠", learn: "🧠", language: "🗣️", spanish: "🇪🇸", english: "🇺🇸"
   };
-  const tagEmoji = (tag) => {
+  const tagEmoji = (tag) => (tag && ui.emojis && ui.emojis[tag]) || autoTagEmoji(tag);
+  const autoTagEmoji = (tag) => {
     const name = String(tag || "").toLowerCase().trim();
     if (!name) return "🏷️";
     if (TAG_EMOJI[name]) return TAG_EMOJI[name];
@@ -1116,6 +1183,7 @@
       const b = document.createElement("button");
       b.type = "button"; b.className = "sheet-item" + (it.danger ? " danger" : "");
       const ic = document.createElement("span"); ic.className = "ic"; ic.textContent = it.icon || "";
+      if (it.dot) ic.append(it.dot);
       const lab = document.createElement("span"); lab.className = "lab"; lab.textContent = it.label;
       b.append(ic, lab);
       if (it.sub != null && it.sub !== "") { const sb3 = document.createElement("span"); sb3.className = "sub"; sb3.textContent = it.sub; b.append(sb3); }
@@ -1199,6 +1267,7 @@
   }
   function tagItems(t) {
     return [
+      t.tag ? { icon: tagEmoji(t.tag), label: "Change emoji for “" + t.tag + "”", run: () => setTimeout(() => emojiPicker(t.tag), 60) } : null,
       ...allTags().map(g => ({ icon: tagEmoji(g), label: g, checked: t.tag === g, run: () => { if (t.tag !== g) patch(t, { tag: g }); } })),
       { icon: "🚫", label: "No tag", checked: !t.tag, run: () => { if (t.tag) patch(t, { tag: null }); } },
       fieldRow("text", "", "New tag…", (v) => { const g = cleanTag(v); if (g) patch(t, { tag: g }); })
@@ -1267,6 +1336,54 @@
     });
   }
 
+  // ---- pick your own emoji for a tag ----
+  const EMOJI_CHOICES = ["📝","📚","🎓","🧪","💻","📖","✍️","🗂️","💼","🤝","📄","📈","🚀","🛍️","🛒","🧾","🧹","🧺","🏠","📦",
+    "🎁","🎂","🎉","💵","💰","🏦","🩺","💊","🧠","😴","💪","🏃","🧘","🏀","⚽","🏈","🍽️","🍳","🥗","☕",
+    "🧴","💄","💇","👕","👟","🐾","🐱","🐶","👨‍👩‍👧","❤️","🙏","🚗","🔧","✈️","🏖️","🎵","🎸","🎮","📷","🎬",
+    "🎨","🌱","📱","📧","📅","🎯","💡","✅","⭐","🔥","🚨","🌈","🎲","🏷️"];
+  function firstEmoji(v) {
+    v = String(v || "").trim();
+    if (!v) return "";
+    try { if (Intl.Segmenter) return [...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(v)][0].segment; } catch (e) {}
+    return [...v][0];
+  }
+  function setTagEmoji(tag, emo) {
+    if (!tag) return;
+    if (emo) ui.emojis[tag] = emo; else delete ui.emojis[tag];
+    saveUi(); render();
+    toast(emo ? "“" + tag + "” now uses " + emo : "“" + tag + "” is back to " + autoTagEmoji(tag));
+  }
+  function emojiPicker(tag) {
+    const cur = tagEmoji(tag);
+    const grid = document.createElement("div"); grid.className = "emoji-grid";
+    for (const e of EMOJI_CHOICES) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = e;
+      if (e === cur) b.className = "on";
+      b.addEventListener("click", () => { closeSheet(); setTagEmoji(tag, e); });
+      grid.append(b);
+    }
+    sheet("Emoji for “" + tag + "”", [
+      { el: grid },
+      fieldRow("text", "", "Or paste any emoji 😀", (v) => { const e = firstEmoji(v); if (e) setTagEmoji(tag, e); }),
+      ui.emojis[tag] ? { icon: autoTagEmoji(tag), label: "Use the automatic emoji", run: () => setTagEmoji(tag, null) } : null
+    ]);
+  }
+
+  // ---- color themes ----
+  const THEMES = [
+    ["classic", "Auto (match my device)", "linear-gradient(135deg,#f6f5f1 50%,#141414 50%)"], ["light", "Light", "#f6f5f1"], ["dark", "Dark", "#141414"],
+    ["green", "Green", "#1f8a4c"], ["blue", "Blue", "#2563eb"],
+    ["red", "Red", "#d4313b"], ["purple", "Purple", "#7c3aed"], ["pink", "Pink", "#db2777"],
+    ["orange", "Orange", "#ea6c0a"], ["teal", "Teal", "#0d9488"], ["midnight", "Midnight (dark)", "#141822"]
+  ];
+  $("themeBtn").addEventListener("click", () => {
+    sheet("Theme", THEMES.map(([id, name, color]) => {
+      const dot = document.createElement("span"); dot.className = "theme-dot"; dot.style.background = color;
+      return { icon: "", label: name, checked: (ui.theme || "classic") === id, dot,
+        run: () => { ui.theme = id; applyTheme(); saveUi(); } };
+    }));
+  });
+
   // ---- sort / filter menu (phone) ----
   $("sortBtn").addEventListener("click", () => {
     const choose = (v) => { const b = viewSeg.querySelector('[data-v="' + v + '"]'); if (b) b.click(); };
@@ -1291,10 +1408,12 @@
     sel.setAttribute("aria-label", "Change tag");
     const opt = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
     for (const g of allTags()) opt(g, tagEmoji(g) + " " + g);
+    if (t.tag) opt("__emoji", "✏️ Change emoji for “" + t.tag + "”…");
     opt("__new", "+ New tag…");
     opt("", "No tag");
     sel.value = t.tag || "";
     sel.addEventListener("change", () => {
+      if (sel.value === "__emoji") { sel.value = t.tag || ""; emojiPicker(t.tag); return; }
       if (sel.value === "__new") {
         const inp = document.createElement("input");
         inp.className = "tag-edit"; inp.placeholder = "New tag"; inp.maxLength = 20;
@@ -1897,7 +2016,7 @@
         await sb.from("prefs").upsert({ user_id: userId, collapsed: d.collapsed || [] });
       },
       onSnapshot(next) {
-        sb.from("prefs").select("collapsed, notify_enabled, notify_time, tz").maybeSingle().then(({ data }) => {
+        sb.from("prefs").select("collapsed, notify_enabled, notify_time, tz, ui").maybeSingle().then(({ data }) => {
           next({ exists: !!data, data: () => (data ? { ...data } : undefined) });
         });
         return () => {};
@@ -2032,11 +2151,19 @@
     refreshDevice();
   }
 
+  // Theme + your tag emojis follow your account to every device.
+  let currentUid = null;
+  function saveUiRemote(u) {
+    if (!currentUid || !sb) return;
+    sb.from("prefs").upsert({ user_id: currentUid, ui: { theme: u.theme, emojis: u.emojis } }).then(() => {}, () => {});
+  }
+
   let started = false;
   function startList(session) {
     if (started) return;
     started = true;
     const uid = session.user.id;
+    currentUid = uid;
     $("auth").hidden = true;
     $("codeForm").hidden = true;
     document.body.classList.remove("signed-out");
@@ -2048,6 +2175,14 @@
     initNotifications(uid);
     prefsRef.onSnapshot((snap) => {
       if (snap.exists) loadNotifyPrefs(snap.data());
+      const sv = snap.exists && snap.data() && snap.data().ui;
+      if (sv && (sv.theme || (sv.emojis && Object.keys(sv.emojis).length))) {
+        ui = { ...ui, theme: sv.theme || ui.theme, emojis: { ...(sv.emojis || {}) } };
+        try { localStorage.setItem(UI_KEY, JSON.stringify(ui)); } catch (e) {}
+        applyTheme(); if (!editing) render();
+      } else if (ui.theme !== "classic" || Object.keys(ui.emojis).length) {
+        saveUiRemote(ui);   // first time on this account: keep what this device already had
+      }
       if (!snap.exists) return;
       const arr = (snap.data() || {}).collapsed;
       if (!Array.isArray(arr)) return;
