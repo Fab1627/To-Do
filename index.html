@@ -280,23 +280,29 @@
   #done { margin-top: 8px; }
   .who { font-size: 13px; color: var(--muted); margin-top: 4px; }
   .auth {
-    margin: 12vh auto 0; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
-    padding: 22px; display: flex; flex-direction: column; gap: 10px; max-width: 380px;
+    margin: 22vh auto 0; width: 100%; max-width: 560px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 22px;
+    padding: 40px 40px 34px; display: flex; flex-direction: column; gap: 16px;
   }
-  .auth h2 { margin: 0; font-size: 20px; text-align: center; }
+  .auth h2 { margin: 0; font-size: 30px; text-align: center; }
+  .auth-sub { margin: 0 0 8px; color: var(--muted); font-size: 17px; }
+  .auth input {
+    border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; background: transparent;
+    color: var(--ink); font-size: 19px;
+  }
+  .auth .add { padding: 16px; font-size: 19px; border-radius: 14px; }
+  .auth-msg { min-height: 22px; margin: 0; font-size: 16px; color: var(--muted); }
+  .auth-msg.err { color: var(--warn); }
+  .auth-switch { margin: 0; font-size: 16px; color: var(--muted); }
+  .auth-switch .linkbtn { font-size: 16px; }
   .auth-sub, .auth-msg, .auth-switch { text-align: center; }
-  /* While signed out, center the title above the sign-in card */
+  body.signed-out main { max-width: 640px; }
   body.signed-out header { justify-content: center; }
   body.signed-out header .count { display: none; }
-  .auth-sub { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
-  .auth input {
-    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: transparent;
-    color: var(--ink); font-size: 16px;
+  @media (max-width: 520px) {
+    .auth { margin-top: 10vh; padding: 28px 22px; }
+    .auth h2 { font-size: 26px; }
   }
-  .auth .add { padding: 11px; }
-  .auth-msg { min-height: 18px; margin: 0; font-size: 14px; color: var(--muted); }
-  .auth-msg.err { color: var(--warn); }
-  .auth-switch { margin: 0; font-size: 14px; color: var(--muted); }
   .hint { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
 </head>
