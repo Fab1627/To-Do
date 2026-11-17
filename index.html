@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117200434">
+<meta name="app-build" content="20261117200730">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -605,7 +605,6 @@
 <div class="update-bar" id="updateBar" role="status" hidden>
   <span>🔄 An update is available.</span>
   <button type="button" id="updateGo">Refresh</button>
-  <button type="button" class="update-x" id="updateX" aria-label="Dismiss">✕</button>
 </div>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="Notification settings">
@@ -2428,17 +2427,17 @@
     const meta = document.querySelector('meta[name="app-build"]');
     const mine = meta && meta.content;
     if (!mine || mine === "BUILD" || !/^https?:/.test(location.protocol)) return;
-    let shown = false, dismissedFor = null;
+    let shown = false;
     async function check() {
       if (shown || document.hidden) return;
       try {
         const r = await fetch(location.pathname + "?v=" + Date.now(), { cache: "no-store" });
         if (!r.ok) return;
         const m = /<meta name="app-build" content="([^"]+)"/.exec(await r.text());
-        if (m && m[1] !== mine && m[1] !== dismissedFor) {
+        if (m && m[1] !== mine) {
+          // Stays on screen until the page is refreshed.
           shown = true;
           $("updateBar").hidden = false;
-          $("updateX").onclick = () => { $("updateBar").hidden = true; dismissedFor = m[1]; shown = false; };
         }
       } catch (e) {}
     }
