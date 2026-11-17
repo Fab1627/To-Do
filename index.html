@@ -1143,8 +1143,8 @@
   function tagItems(t) {
     return [
       ...allTags().map(g => ({ icon: tagEmoji(g), label: g, checked: t.tag === g, run: () => { if (t.tag !== g) patch(t, { tag: g }); } })),
-      fieldRow("text", "", "New tag…", (v) => { const g = cleanTag(v); if (g) patch(t, { tag: g }); }),
-      { icon: "🚫", label: "No tag", checked: !t.tag, run: () => { if (t.tag) patch(t, { tag: null }); } }
+      { icon: "🚫", label: "No tag", checked: !t.tag, run: () => { if (t.tag) patch(t, { tag: null }); } },
+      fieldRow("text", "", "New tag…", (v) => { const g = cleanTag(v); if (g) patch(t, { tag: g }); })
     ];
   }
   function openTaskMenu(t, li) {
