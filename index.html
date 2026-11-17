@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117200316">
+<meta name="app-build" content="20261117200434">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -222,7 +222,7 @@
   .check:checked { background: var(--accent); border-color: var(--accent); }
   .check:checked::after {
     content: ""; width: 6px; height: 11px;
-    border: solid #fff; border-width: 0 2px 2px 0;
+    border: solid var(--accent-ink); border-width: 0 2px 2px 0;
     transform: rotate(45deg) translate(-1px, -1px);
   }
   .body { flex: 1; min-width: 0; }
@@ -293,14 +293,14 @@
   .update-bar {
     position: fixed; left: 50%; top: calc(12px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 80;
     display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 24px);
-    background: var(--accent); color: #fff; border-radius: 14px; padding: 10px 10px 10px 16px;
+    background: var(--accent); color: var(--accent-ink); border-radius: 14px; padding: 10px 10px 10px 16px;
     box-shadow: 0 8px 24px rgba(0,0,0,.25); font-size: 15px; animation: sheetUp .2s ease-out;
   }
   .update-bar { width: max-content; }
   .update-bar span { white-space: nowrap; }
   .update-bar button { border: none; border-radius: 10px; font: inherit; cursor: pointer; }
-  #updateGo { background: #fff; color: var(--accent); font-weight: 700; padding: 7px 14px; }
-  .update-x { background: transparent; color: #fff; opacity: .8; padding: 6px 8px; }
+  #updateGo { background: var(--accent-ink); color: var(--accent); font-weight: 700; padding: 7px 14px; }
+  .update-x { background: transparent; color: var(--accent-ink); opacity: .8; padding: 6px 8px; }
   .hdr-right { display: inline-flex; align-items: center; gap: 10px; }
   .bell {
     position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
@@ -434,22 +434,22 @@
   @media (prefers-color-scheme: dark) { .toast button { color: #2f6df6; } }
   /* ---- color themes ---- */
   @media (prefers-color-scheme: light) {
-    :root[data-theme="green"] { --bg: #f1f7f2; --line: #dbe8de; --accent: #1f8a4c; --date-bg: #e2f3e8; --date-ink: #1d6b3d; }
-    :root[data-theme="blue"] { --bg: #f0f5fc; --line: #d9e3f2; --accent: #2563eb; --date-bg: #e0eaff; --date-ink: #1e40af; }
-    :root[data-theme="red"] { --bg: #fcf2f2; --line: #f0dada; --accent: #d4313b; --date-bg: #fde3e3; --date-ink: #a1232b; }
-    :root[data-theme="purple"] { --bg: #f6f2fc; --line: #e4dcf2; --accent: #7c3aed; --date-bg: #ede4ff; --date-ink: #5b21b6; }
-    :root[data-theme="pink"] { --bg: #fdf2f7; --line: #f1dbe6; --accent: #db2777; --date-bg: #fce1ee; --date-ink: #9d174d; }
-    :root[data-theme="orange"] { --bg: #fdf6ee; --line: #f0e2d2; --accent: #ea6c0a; --date-bg: #fde9d6; --date-ink: #9a4108; }
-    :root[data-theme="teal"] { --bg: #eff8f8; --line: #d6e9e7; --accent: #0d9488; --date-bg: #d9f2ef; --date-ink: #0f6e66; }
+    :root[data-theme="green"] { --bg: #f2faf4; --card: #ffffff; --line: #d7ecdd; --accent: #8fd3a8; --accent-ink: #11402a; --date-bg: #e3f5e9; --date-ink: #2e7a4f; }
+    :root[data-theme="blue"] { --bg: #f2f7fd; --card: #ffffff; --line: #d6e4f5; --accent: #9cc3f0; --accent-ink: #0f2f57; --date-bg: #e3eefb; --date-ink: #2f5e99; }
+    :root[data-theme="red"] { --bg: #fdf4f4; --card: #ffffff; --line: #f2dada; --accent: #f4a3a8; --accent-ink: #5a1a1f; --date-bg: #fbe4e5; --date-ink: #a1404a; }
+    :root[data-theme="purple"] { --bg: #f7f4fd; --card: #ffffff; --line: #e3dbf3; --accent: #c4b0f0; --accent-ink: #2e1a5c; --date-bg: #eee7fc; --date-ink: #6545a8; }
+    :root[data-theme="pink"] { --bg: #fdf3f8; --card: #ffffff; --line: #f2d9e6; --accent: #f5afd0; --accent-ink: #5c1a3a; --date-bg: #fbe3ef; --date-ink: #a3407a; }
+    :root[data-theme="orange"] { --bg: #fdf7f0; --card: #ffffff; --line: #f2e3d0; --accent: #f8c08e; --accent-ink: #5a2c08; --date-bg: #fcebd9; --date-ink: #a35a1c; }
+    :root[data-theme="teal"] { --bg: #f1f9f8; --card: #ffffff; --line: #d4ebe8; --accent: #8fd5cb; --accent-ink: #0d3d37; --date-bg: #def4f1; --date-ink: #2a7a70; }
   }
   @media (prefers-color-scheme: dark) {
-    :root[data-theme="green"] { --bg: #0f1612; --card: #16201a; --line: #24342a; --accent: #34c27a; --date-bg: #183a26; --date-ink: #9be5bb; }
-    :root[data-theme="blue"] { --bg: #0e1420; --card: #151d2b; --line: #233049; --accent: #5b8cff; --date-bg: #1d2b4d; --date-ink: #b8c9ff; }
-    :root[data-theme="red"] { --bg: #180f10; --card: #221617; --line: #3a2426; --accent: #ff5a63; --date-bg: #4a1d21; --date-ink: #ffc0c4; }
-    :root[data-theme="purple"] { --bg: #130f1c; --card: #1c1628; --line: #2f2642; --accent: #a78bfa; --date-bg: #2e2050; --date-ink: #d9c9ff; }
-    :root[data-theme="pink"] { --bg: #1a0f15; --card: #24161e; --line: #3d2532; --accent: #f472b6; --date-bg: #4a1c33; --date-ink: #ffc4de; }
-    :root[data-theme="orange"] { --bg: #18120c; --card: #221a12; --line: #3a2c1e; --accent: #fb923c; --date-bg: #4a2a12; --date-ink: #ffd2a8; }
-    :root[data-theme="teal"] { --bg: #0c1716; --card: #12201f; --line: #1f3533; --accent: #2dd4bf; --date-bg: #123b37; --date-ink: #a5f0e6; }
+    :root[data-theme="green"] { --bg: #121a15; --card: #1a241d; --line: #2a3a2f; --accent: #9ad8b0; --accent-ink: #0e2a1a; --date-bg: #22382a; --date-ink: #b8ebc9; }
+    :root[data-theme="blue"] { --bg: #11161f; --card: #18202c; --line: #28354a; --accent: #a9c9f2; --accent-ink: #0e2340; --date-bg: #213452; --date-ink: #c9dcf8; }
+    :root[data-theme="red"] { --bg: #1b1314; --card: #251a1b; --line: #3d2a2c; --accent: #f2a7ab; --accent-ink: #3d1216; --date-bg: #45252a; --date-ink: #f8c9cc; }
+    :root[data-theme="purple"] { --bg: #16131e; --card: #1f1a2a; --line: #33294a; --accent: #c8b6f2; --accent-ink: #24164a; --date-bg: #31274f; --date-ink: #ddd0fa; }
+    :root[data-theme="pink"] { --bg: #1c1318; --card: #261a21; --line: #402b36; --accent: #f4b4d2; --accent-ink: #44152d; --date-bg: #47263a; --date-ink: #f9cde1; }
+    :root[data-theme="orange"] { --bg: #1c1610; --card: #261e16; --line: #40311f; --accent: #f6c597; --accent-ink: #43260b; --date-bg: #4a3320; --date-ink: #fbd9b8; }
+    :root[data-theme="teal"] { --bg: #111b1a; --card: #182624; --line: #283c39; --accent: #93d6cc; --accent-ink: #0b3530; --date-bg: #1f3d39; --date-ink: #b9ece4; }
   }
   :root[data-theme="light"] {
     --bg: #f6f5f1; --card: #ffffff; --ink: #1d1d1b; --muted: #77756e; --line: #e6e3db; --accent: #2f6df6;
@@ -1388,9 +1388,9 @@
   // ---- color themes ----
   const THEMES = [
     ["classic", "Auto (match my device)", "linear-gradient(135deg,#f6f5f1 50%,#141414 50%)"], ["light", "Light", "#f6f5f1"], ["dark", "Dark", "#141414"],
-    ["green", "Green", "#1f8a4c"], ["blue", "Blue", "#2563eb"],
-    ["red", "Red", "#d4313b"], ["purple", "Purple", "#7c3aed"], ["pink", "Pink", "#db2777"],
-    ["orange", "Orange", "#ea6c0a"], ["teal", "Teal", "#0d9488"], ["midnight", "Midnight (dark)", "#141822"]
+    ["green", "Green", "#8fd3a8"], ["blue", "Blue", "#9cc3f0"],
+    ["red", "Red", "#f4a3a8"], ["purple", "Purple", "#c4b0f0"], ["pink", "Pink", "#f5afd0"],
+    ["orange", "Orange", "#f8c08e"], ["teal", "Teal", "#8fd5cb"], ["midnight", "Midnight (dark)", "#141822"]
   ];
   $("themeBtn").addEventListener("click", () => {
     sheet("Theme", THEMES.map(([id, name, color]) => {
