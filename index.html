@@ -1,0 +1,1497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>To-Do</title>
+<meta name="theme-color" content="#f6f5f1">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="To-Do">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --card: #ffffff;
+    --ink: #1d1d1b;
+    --muted: #77756e;
+    --line: #e6e3db;
+    --accent: #2f6df6;
+    --accent-ink: #ffffff;
+    --rec: #e5484d;
+    --done: #9b9890;
+    --warn: #c2410c;
+    --hi: #dc2626; --hi-bg: #fdecec;
+    --md: #a16207; --md-bg: #fef9c3;
+    --lo: #15803d; --lo-bg: #dcfce7;
+    --date-bg: #eef2ff; --date-ink: #3346a8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141414;
+      --card: #1d1d1d;
+      --ink: #f1f0ec;
+      --muted: #9a988f;
+      --line: #2e2e2c;
+      --accent: #5b8cff;
+      --done: #6d6b65;
+      --warn: #fb923c;
+      --hi: #f87171; --hi-bg: #3a1d1d;
+      --md: #facc15; --md-bg: #3a3410;
+      --lo: #4ade80; --lo-bg: #12301d;
+      --date-bg: #23294a; --date-ink: #b8c4ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.45 "DM Sans", system-ui, sans-serif;
+  }
+  main { max-width: 680px; margin: 0 auto; padding: 32px 18px 80px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  h1 { font-size: 28px; margin: 0; letter-spacing: -0.02em; }
+  .count { color: var(--muted); font-size: 14px; }
+  button, select, input { font: inherit; }
+  button { cursor: pointer; }
+
+  /* composer */
+  .composer {
+    margin-top: 22px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 12px;
+  }
+  .row1 { display: flex; gap: 10px; align-items: center; }
+  .row1 input {
+    flex: 1; min-width: 0;
+    border: none; outline: none; background: transparent;
+    color: var(--ink); font-size: 17px; padding: 8px 4px;
+  }
+  .row1 input::placeholder { color: var(--muted); }
+  .row2 {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+  }
+  .lbl { font-size: 13px; color: var(--muted); margin-right: 2px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button {
+    border: none; background: transparent; color: var(--muted);
+    padding: 6px 11px; font-size: 14px;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on[data-p="high"] { background: var(--hi-bg); color: var(--hi); font-weight: 500; }
+  .seg button.on[data-p="medium"] { background: var(--md-bg); color: var(--md); font-weight: 500; }
+  .seg button.on[data-p="low"] { background: var(--lo-bg); color: var(--lo); font-weight: 500; }
+  .seg button.on[data-v] { background: var(--ink); color: var(--bg); font-weight: 500; }
+  .date-in {
+    border: 1px solid var(--line); border-radius: 10px; background: transparent;
+    color: var(--ink); padding: 5px 8px; font-size: 14px;
+    color-scheme: light dark;
+  }
+  .spacer { flex: 1; }
+  .mic {
+    width: 46px; height: 46px; flex: none;
+    border-radius: 50%; border: none;
+    background: var(--accent); color: var(--accent-ink);
+    display: grid; place-items: center;
+    transition: transform .1s, background .2s;
+  }
+  .mic:active { transform: scale(.95); }
+  .mic.listening { background: var(--rec); animation: pulse 1.4s infinite; }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(229,72,77,.5); }
+    70% { box-shadow: 0 0 0 14px rgba(229,72,77,0); }
+    100% { box-shadow: 0 0 0 0 rgba(229,72,77,0); }
+  }
+  .add {
+    border: none; background: var(--ink); color: var(--bg);
+    border-radius: 10px; padding: 9px 16px; flex: none; font-weight: 500;
+  }
+  .add:disabled { opacity: .35; cursor: default; }
+  .status { min-height: 22px; margin: 10px 4px 0; font-size: 14px; color: var(--muted); }
+  .status.err { color: var(--warn); }
+
+  /* voice review panel */
+  .review {
+    margin-top: 12px;
+    background: var(--card);
+    border: 2px solid var(--accent);
+    border-radius: 16px;
+    padding: 14px;
+  }
+  .review h3 { margin: 0 0 4px; font-size: 15px; }
+  .heard { font-size: 14px; color: var(--muted); margin: 0 0 12px; font-style: italic; word-wrap: break-word; }
+  .thinking { font-size: 14px; color: var(--muted); padding: 6px 0; }
+  .thinking::after { content: "…"; animation: dots 1.2s steps(3) infinite; }
+  @keyframes dots { 0% { content: "."; } 33% { content: ".."; } 66% { content: "..."; } }
+  .rrow {
+    display: grid; grid-template-columns: 1fr auto auto auto auto; gap: 8px; align-items: center;
+    padding: 8px 0; border-top: 1px solid var(--line);
+  }
+  .rrow input[type=text] {
+    min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+    background: transparent; color: var(--ink); font-size: 15px;
+  }
+  .rrow .r-tag { width: 120px; }
+  .rrow select {
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 6px;
+    background: var(--card); color: var(--ink); font-size: 14px;
+  }
+  .rrow select.high { color: var(--hi); border-color: var(--hi); }
+  .rrow select.medium { color: var(--md); border-color: var(--md); }
+  .rrow select.low { color: var(--lo); }
+  @media (max-width: 520px) {
+    .rrow { grid-template-columns: 1fr 1fr auto; }
+    .rrow .r-text { grid-column: 1 / -1; }
+  }
+  .rbtns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
+  .ghost { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 10px; padding: 8px 14px; }
+
+  /* view switch */
+  .viewbar { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 10px; flex-wrap: wrap; }
+
+  /* groups + items */
+  .group h2 {
+    font-size: 13px; text-transform: uppercase; letter-spacing: .06em;
+    color: var(--muted); margin: 22px 4px 8px; font-weight: 700;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .group h2 .n { font-weight: 500; opacity: .8; }
+  .group.overdue h2 { color: var(--warn); }
+  .day { margin: 0 0 18px; }
+  .day h3 {
+    font-size: 14px; font-weight: 700; margin: 14px 4px 8px; color: var(--ink);
+    display: flex; align-items: center; gap: 10px;
+    cursor: pointer; user-select: none; -webkit-user-select: none;
+  }
+  .day h3 .chev { display: inline-block; width: 12px; transition: transform .15s; color: var(--muted); }
+  .day.collapsed h3 .chev { transform: rotate(-90deg); }
+  .day.collapsed .list { display: none; }
+  .day h3 .dots { display: none; font-size: 11px; letter-spacing: 1px; font-weight: 400; order: 1; }
+  .day.collapsed h3 .dots { display: inline; }
+  .day.collapsed h3 .n { display: none; }
+  .day.collapsed { margin-bottom: 6px; }
+  .day h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .day h3 .n { font-weight: 500; color: var(--muted); font-size: 13px; order: 1; }
+  .day.overdue h3 { color: var(--warn); }
+  .day.none h3 { color: var(--muted); }
+  .group.prio-high > h2 { color: var(--hi); }
+  .group.prio-medium > h2 { color: var(--md); }
+  .group.prio-low > h2 { color: var(--lo); }
+  .group + .group { margin-top: 30px; }
+  .group.top { margin-top: 8px; }
+  .group.high h2 { color: var(--hi); }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .item {
+    display: flex; align-items: flex-start; gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 10px 12px 12px;
+    margin-bottom: 8px;
+  }
+  .item.p-high { border-left-color: var(--hi); }
+  .item.p-medium { border-left-color: var(--md); }
+  .item.p-low { border-left-color: var(--lo); }
+  .check {
+    appearance: none; -webkit-appearance: none;
+    width: 24px; height: 24px; flex: none; margin: 0;
+    border: 2px solid var(--muted); border-radius: 50%;
+    cursor: pointer; display: grid; place-items: center; background: transparent;
+  }
+  .check:hover { border-color: var(--accent); }
+  .check:checked { background: var(--accent); border-color: var(--accent); }
+  .check:checked::after {
+    content: ""; width: 6px; height: 11px;
+    border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg) translate(-1px, -1px);
+  }
+  .body { flex: 1; min-width: 0; }
+  .text { word-wrap: break-word; outline: none; border-radius: 4px; }
+  .text[contenteditable="true"] { box-shadow: 0 0 0 2px var(--accent); padding: 0 3px; }
+  .meta { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid transparent;
+    background: var(--lo-bg); color: var(--lo); position: relative;
+  }
+  button.chip:hover { border-color: currentColor; }
+  .chip.high { background: var(--hi-bg); color: var(--hi); }
+  .chip.medium { background: var(--md-bg); color: var(--md); }
+  .chip.low { background: var(--lo-bg); color: var(--lo); }
+  .chip.tag { background: transparent; border: 1px solid var(--line); color: var(--ink); cursor: pointer; }
+  .chip.tag:hover { border-color: var(--muted); }
+  .chip.tag.none { color: var(--muted); border-style: dashed; }
+  .tag-edit {
+    font-size: 12px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--accent);
+    background: transparent; color: var(--ink); width: 110px; outline: none;
+  }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .filters:empty { display: none; }
+  .fchip {
+    border: 1px solid var(--line); background: var(--card); color: var(--ink);
+    border-radius: 999px; padding: 4px 11px; font-size: 13px;
+  }
+  .fchip .n { color: var(--muted); margin-left: 4px; }
+  .fchip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .fchip.on .n { color: var(--bg); opacity: .7; }
+  .picker { display: inline-flex; align-items: center; gap: 2px; }
+  .picker .date-in { padding: 2px 6px; font-size: 13px; }
+  button.chip { cursor: pointer; font: inherit; font-size: 12px; }
+  button.chip:hover { border-color: currentColor; }
+  .chip.exam { background: var(--ink); color: var(--bg); font-weight: 500; }
+  .chip.date { background: var(--date-bg); color: var(--date-ink); }
+  .chip.date.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .chip.date.overdue { background: transparent; color: var(--warn); border-color: var(--warn); }
+  .chip.prio { cursor: pointer; }
+  .chip.prio:hover { border-color: currentColor; }
+  .chip select {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .chip input[type=date] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    color-scheme: light dark;
+  }
+  .item.done { opacity: .75; }
+  .item.done .text { color: var(--done); text-decoration: line-through; }
+  .actions { display: flex; gap: 2px; flex: none; }
+  .icon {
+    border: none; background: transparent; color: var(--muted);
+    padding: 3px 5px; border-radius: 6px; opacity: .6; line-height: 1;
+  }
+  .icon:hover { opacity: 1; background: var(--bg); }
+  .icon.del:hover { color: var(--warn); }
+
+  .empty { text-align: center; color: var(--muted); padding: 36px 10px; }
+  .done-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 28px; color: var(--muted); font-size: 14px;
+  }
+  .linkbtn { border: none; background: none; color: var(--muted); text-decoration: underline; padding: 4px; font-size: 14px; }
+  .linkbtn:hover { color: var(--ink); }
+  #done { margin-top: 8px; }
+  .who { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .auth {
+    margin-top: 28px; background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+    padding: 22px; display: flex; flex-direction: column; gap: 10px; max-width: 380px;
+  }
+  .auth h2 { margin: 0; font-size: 20px; }
+  .auth-sub { margin: 0 0 6px; color: var(--muted); font-size: 14px; }
+  .auth input {
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: transparent;
+    color: var(--ink); font-size: 16px;
+  }
+  .auth .add { padding: 11px; }
+  .auth-msg { min-height: 18px; margin: 0; font-size: 14px; color: var(--muted); }
+  .auth-msg.err { color: var(--warn); }
+  .auth-switch { margin: 0; font-size: 14px; color: var(--muted); }
+  .hint { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>To-Do</h1>
+    <span class="count" id="count"></span>
+  </header>
+  <div class="who" id="who" hidden><span id="whoEmail"></span> · <button class="linkbtn" id="signOut">Sign out</button></div>
+
+  <form class="auth" id="auth" hidden autocomplete="on">
+    <h2 id="authTitle">Sign in</h2>
+    <p class="auth-sub" id="authSub">Your list is private to your account.</p>
+    <input type="email" id="authEmail" placeholder="Email" autocomplete="email" required>
+    <input type="password" id="authPass" placeholder="Password (6+ characters)" autocomplete="current-password" minlength="6" required>
+    <button type="submit" class="add" id="authBtn">Sign in</button>
+    <p class="auth-msg" id="authMsg"></p>
+    <p class="auth-switch"><span id="authSwitchText">New here?</span> <button type="button" class="linkbtn" id="authSwitch">Create an account</button></p>
+  </form>
+  <div id="app" hidden>
+
+  <form class="composer" id="form" autocomplete="off">
+    <div class="row1">
+      <button type="button" class="mic" id="mic" title="Speak a task" aria-label="Speak a task" hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="17" x2="12" y2="22"/></svg>
+      </button>
+      <input id="input" placeholder="Type or tap the mic… e.g. “urgent: thermo HW by Friday”" aria-label="New task">
+      <button type="submit" class="add" id="addBtn" disabled>Add</button>
+    </div>
+    <div class="row2">
+      <span class="lbl">Importance</span>
+      <div class="seg" id="prioSeg">
+        <button type="button" data-p="high">High</button>
+        <button type="button" data-p="medium" class="on">Medium</button>
+        <button type="button" data-p="low">Low</button>
+      </div>
+      <span class="spacer"></span>
+      <span class="lbl">Due</span>
+      <input type="date" class="date-in" id="dueIn" aria-label="Due date">
+    </div>
+  </form>
+  <div class="status" id="status"></div>
+
+  <div class="review" id="review" hidden>
+    <h3>🎙️ Here’s what I heard</h3>
+    <p class="heard" id="heard"></p>
+    <div id="rbody"></div>
+    <datalist id="tagList"></datalist>
+    <div class="rbtns">
+      <button type="button" class="ghost" id="rCancel">Cancel</button>
+      <button type="button" class="ghost" id="rAddRow">+ Another task</button>
+      <button type="button" class="add" id="rConfirm" disabled>Add</button>
+    </div>
+  </div>
+
+  <div class="viewbar">
+    <span class="lbl">Sort by</span>
+    <div class="seg" id="viewSeg">
+      <button type="button" data-v="default" class="on">Default</button>
+      <button type="button" data-v="prio">Importance</button>
+      <button type="button" data-v="date">Date</button>
+    </div>
+  </div>
+
+  <div class="filters" id="filters"></div>
+  <div id="groups"></div>
+  <div class="empty" id="empty" hidden>Nothing on your list 🎉</div>
+
+  <div class="done-head" id="doneHead" hidden>
+    <button class="linkbtn" id="toggleDone"></button>
+    <button class="linkbtn" id="clearDone">Clear completed</button>
+  </div>
+  <ul class="list" id="done" hidden></ul>
+
+  <p class="hint">Tap a task’s importance, 🏷️ category or 📅 date tag to change it anytime · tap a category above the list to filter · ✎ to edit text</p>
+  </div>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const form = $("form"), input = $("input"), addBtn = $("addBtn"), mic = $("mic");
+  const statusEl = $("status"), groupsEl = $("groups"), doneEl = $("done");
+  const emptyEl = $("empty"), doneHead = $("doneHead"), toggleDone = $("toggleDone");
+  const clearDone = $("clearDone"), countEl = $("count"), dueIn = $("dueIn");
+  const prioSeg = $("prioSeg"), viewSeg = $("viewSeg");
+
+  const BASE_TAGS = ["Exams", "Classes", "Job", "Personal", "Pet"];
+  const TAG_EMOJI = {
+    exams: "📝", classes: "📚", job: "💼", personal: "🛍️", pet: "🐾",
+    health: "🩺", fitness: "💪", car: "🚗", food: "🍽️", money: "💵",
+    home: "🏠", errands: "🧾", travel: "✈️", social: "🎉", gaming: "🎮", skincare: "🧴"
+  };
+  function cleanTag(v) {
+    v = String(v || "").replace(/[^\p{L}\p{N} &-]/gu, "").trim().slice(0, 20);
+    if (!v) return null;
+    return v.split(/\s+/).map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+  }
+  const tagEmoji = (tag) => TAG_EMOJI[String(tag || "").toLowerCase()] || "🏷️";
+  const tagText = (tag) => tag ? tagEmoji(tag) + " " + tag : "+ tag";
+  function allTags() {
+    const set = new Set(BASE_TAGS);
+    for (const t of tasks) if (t.tag) set.add(t.tag);
+    return [...set];
+  }
+  let tagFilter = null;
+  // Collapsed day blocks, remembered between visits
+  let collapsed = new Set();
+  let prefsRef = null;
+  try { collapsed = new Set(JSON.parse(localStorage.getItem("todo.collapsed") || "[]")); } catch (e) {}
+  function saveCollapsed() {
+    const today = todayInfo().iso;
+    // forget days that are already over
+    for (const k of [...collapsed]) {
+      const d = k.split("|").pop();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && d < today) collapsed.delete(k);
+    }
+    const arr = [...collapsed];
+    try { localStorage.setItem("todo.collapsed", JSON.stringify(arr)); } catch (e) {}
+    if (prefsRef) prefsRef.set({ collapsed: arr }).catch(() => {});
+  }
+
+  const PRIOS = ["high", "medium", "low"];
+  const PRIO_LABEL = { high: "High", medium: "Medium", low: "Low" };
+  const PRIO_RANK = { high: 0, medium: 1, low: 2 };
+
+  let db = null, col = null, sample = null, dict = null;
+  let sampleOk = true;
+  let tasks = [];
+  let showDone = false;
+  let loaded = false;
+  let busy = false;
+  let composerPrio = "medium";
+  let prioTouched = false;
+  let view = "default";
+  try { view = localStorage.getItem("todo.view3") || "default"; } catch (e) {}
+  if (!["default", "prio", "date"].includes(view)) view = "default";
+
+  function setStatus(msg, err) {
+    statusEl.textContent = msg || "";
+    statusEl.classList.toggle("err", !!err);
+  }
+
+  function isoOf(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function todayInfo() {
+    const d = new Date();
+    return { iso: isoOf(d), wd: d.toLocaleDateString("en-US", { weekday: "long" }) };
+  }
+  function dayDiff(due) {
+    const [y, m, d] = due.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((dt - t) / 86400000);
+  }
+  function validDue(s) { return typeof s === "string" && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : null; }
+  function prioOf(t) { return PRIOS.includes(t.priority) ? t.priority : "medium"; }
+
+  function dueLabel(due) {
+    if (!due) return "No date";
+    const diff = dayDiff(due);
+    const [y, m, d] = due.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    if (diff === -1) return "Yesterday";
+    if (diff > 1 && diff < 7) return dt.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+    return dt.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+  function dateBucket(t) {
+    if (!t.due) return "none";
+    const diff = dayDiff(t.due);
+    if (diff < 0) return "overdue";
+    if (diff === 0) return "today";
+    if (diff === 1) return "tomorrow";
+    if (diff < 7) return "week";
+    return "later";
+  }
+  const DATE_GROUPS = [
+    ["overdue", "Overdue"], ["today", "Today"], ["tomorrow", "Tomorrow"],
+    ["week", "This week"], ["later", "Later"], ["none", "No date"]
+  ];
+  const PRIO_GROUPS = [["high", "🔴 High importance"], ["medium", "🟡 Medium"], ["low", "🟢 Low"]];
+
+  function byPrioThenDate(a, b) {
+    const p = PRIO_RANK[prioOf(a)] - PRIO_RANK[prioOf(b)];
+    if (p) return p;
+    const ad = a.due || "9999", bd = b.due || "9999";
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    if ((a.at || 0) !== (b.at || 0)) return (a.at || Infinity) - (b.at || Infinity);
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  }
+  function byDateThenPrio(a, b) {
+    const ad = a.due || "9999", bd = b.due || "9999";
+    if (ad !== bd) return ad < bd ? -1 : 1;
+    const p = PRIO_RANK[prioOf(a)] - PRIO_RANK[prioOf(b)];
+    if (p) return p;
+    if ((a.at || 0) !== (b.at || 0)) return (a.at || Infinity) - (b.at || Infinity);
+    return (a.createdAt || 0) - (b.createdAt || 0);
+  }
+
+  function renderFilters(openTasks) {
+    const el = $("filters");
+    const counts = new Map();
+    for (const t of openTasks) if (t.tag) counts.set(t.tag, (counts.get(t.tag) || 0) + 1);
+    if (tagFilter && !counts.has(tagFilter)) tagFilter = null;
+    if (!counts.size) { el.replaceChildren(); return; }
+    const mk = (label, n, value) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "fchip" + (tagFilter === value ? " on" : "");
+      b.textContent = label;
+      const c = document.createElement("span"); c.className = "n"; c.textContent = n; b.append(c);
+      b.addEventListener("click", () => { tagFilter = tagFilter === value || value === null ? null : value; render(); });
+      return b;
+    };
+    const tags = [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b));
+    el.replaceChildren(mk("All", openTasks.length, null), ...tags.map(t => mk(tagEmoji(t) + " " + t, counts.get(t), t)));
+  }
+
+  function render() {
+    const allOpen = tasks.filter(t => !t.done);
+    renderFilters(allOpen);
+    const open = tagFilter ? allOpen.filter(t => (t.tag || "") === tagFilter) : allOpen;
+    const done = tasks.filter(t => t.done).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+
+    const frag = document.createDocumentFragment();
+
+    // ---- day helpers ----
+    const dayKey = (t) => !t.due ? "none" : (dayDiff(t.due) < 0 ? "overdue" : t.due);
+    const dayTitle = (k) => {
+      if (k === "none") return "No date";
+      if (k === "overdue") return "⚠️ Overdue";
+      const diff = dayDiff(k);
+      const [y, m, d] = k.split("-").map(Number);
+      const nice = new Date(y, m - 1, d).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" });
+      if (diff === 0) return "Today · " + nice;
+      if (diff === 1) return "Tomorrow · " + nice;
+      return nice;
+    };
+    const todayIso = todayInfo().iso;
+    // noneEarly: Overdue → Today → No date → Tomorrow → later days
+    const dayOrderFor = (noneEarly) => (a, b) => {
+      const r = (k) => {
+        if (k === "overdue") return "0";
+        if (k === "none") return noneEarly ? "2" : "z";
+        if (noneEarly) return (k <= todayIso ? "1" : "3") + k;
+        return "1" + k;
+      };
+      return r(a) < r(b) ? -1 : r(a) > r(b) ? 1 : 0;
+    };
+    function dayBlocks(items, sorter, noneEarly, scope) {
+      const dayOrder = dayOrderFor(!!noneEarly);
+      const map = new Map();
+      for (const t of items) {
+        const k = dayKey(t);
+        if (!map.has(k)) map.set(k, []);
+        map.get(k).push(t);
+      }
+      return [...map.keys()].sort(dayOrder).map(k => {
+        const ckey = (scope || "x") + "|" + k;
+        const div = document.createElement("div");
+        div.className = "day" + (k === "overdue" ? " overdue" : k === "none" ? " none" : "") + (collapsed.has(ckey) ? " collapsed" : "");
+        const h = document.createElement("h3");
+        h.setAttribute("role", "button"); h.tabIndex = 0;
+        h.setAttribute("aria-expanded", String(!collapsed.has(ckey)));
+        h.title = "Tap to collapse or expand this day";
+        const chev = document.createElement("span"); chev.className = "chev"; chev.textContent = "▾";
+        const lbl = document.createElement("span"); lbl.textContent = dayTitle(k);
+        const n = document.createElement("span"); n.className = "n"; n.textContent = map.get(k).length;
+        // collapsed summary: one dot per task by importance (🔴🔴🟡🟢)
+        const dots = document.createElement("span"); dots.className = "dots";
+        const EMO = { high: "🔴", medium: "🟡", low: "🟢" };
+        const parts = [];
+        for (const p of PRIOS) {
+          const c = map.get(k).filter(t => prioOf(t) === p).length;
+          if (!c) continue;
+          parts.push(c <= 5 ? EMO[p].repeat(c) : EMO[p] + "×" + c);
+        }
+        dots.textContent = parts.join(" ");
+        dots.title = PRIOS.map(p => [p, map.get(k).filter(t => prioOf(t) === p).length]).filter(x => x[1]).map(x => x[1] + " " + PRIO_LABEL[x[0]].toLowerCase()).join(", ");
+        h.append(chev, lbl, dots, n);
+        const toggle = () => {
+          if (collapsed.has(ckey)) collapsed.delete(ckey); else collapsed.add(ckey);
+          div.classList.toggle("collapsed", collapsed.has(ckey));
+          h.setAttribute("aria-expanded", String(!collapsed.has(ckey)));
+          saveCollapsed();
+        };
+        h.addEventListener("click", toggle);
+        h.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+        const ul = document.createElement("ul"); ul.className = "list";
+        ul.append(...map.get(k).sort(sorter).map(itemEl));
+        div.append(h, ul);
+        return div;
+      });
+    }
+    function section(cls, title, count, children) {
+      const sec = document.createElement("section"); sec.className = "group " + cls;
+      const h = document.createElement("h2"); h.textContent = title;
+      const n = document.createElement("span"); n.className = "n"; n.textContent = count;
+      h.append(n);
+      sec.append(h, ...children);
+      return sec;
+    }
+    const listOf = (items) => {
+      const ul = document.createElement("ul"); ul.className = "list";
+      ul.append(...items.map(itemEl)); return ul;
+    };
+
+    if (view === "default") {
+      // High → Medium → Low; inside each: one block per due day (soonest first), then No date
+      // 1) Overdue + Today (all importance levels, High → Medium → Low)
+      const now = open.filter(t => t.due && dayDiff(t.due) <= 0);
+      // 2) No date — right under Today (or at the very top if nothing is due today)
+      const undated = open.filter(t => !t.due);
+      if (now.length || undated.length) {
+        const sec = document.createElement("section"); sec.className = "group top";
+        sec.append(...dayBlocks(now, byPrioThenDate, false, "d-top"));
+        sec.append(...dayBlocks(undated, byPrioThenDate, false, "d-nodate"));
+        frag.append(sec);
+      }
+      // 3) Tomorrow onward, split by importance, one block per day
+      for (const [p, label] of PRIO_GROUPS) {
+        const items = open.filter(t => prioOf(t) === p && t.due && dayDiff(t.due) > 0);
+        if (!items.length) continue;
+        frag.append(section("prio-" + p, label, items.length, dayBlocks(items, byPrioThenDate, true, "d-" + p)));
+      }
+    } else if (view === "date") {
+      // One block per due day; inside each day: High → Medium → Low
+      frag.append(...dayBlocks(open, byPrioThenDate, false, "date"));
+    } else {
+      for (const [p, label] of PRIO_GROUPS) {
+        const items = open.filter(t => prioOf(t) === p).sort(byDateThenPrio);
+        if (!items.length) continue;
+        frag.append(section("prio-" + p, label, items.length, [listOf(items)]));
+      }
+    }
+    groupsEl.replaceChildren(frag);
+    doneEl.replaceChildren(...done.map(itemEl));
+
+    emptyEl.hidden = !loaded || open.length > 0;
+    const hi = open.filter(t => prioOf(t) === "high").length;
+    countEl.textContent = loaded ? open.length + " left" + (hi ? " · " + hi + " high" : "") : "";
+    doneHead.hidden = done.length === 0;
+    doneEl.hidden = !showDone || done.length === 0;
+    toggleDone.textContent = (showDone ? "Hide" : "Show") + " completed (" + done.length + ")";
+    for (const b of viewSeg.children) b.classList.toggle("on", b.dataset.v === view);
+  }
+
+  function itemEl(t) {
+    const p = prioOf(t);
+    const li = document.createElement("li");
+    li.className = "item p-" + p + (t.done ? " done" : "");
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.className = "check"; cb.checked = !!t.done;
+    cb.setAttribute("aria-label", t.done ? "Mark not done" : "Mark done");
+    cb.addEventListener("change", () => {
+      const f = { done: cb.checked, doneAt: cb.checked ? Date.now() : null };
+      if (t.kind === "exam" && !cb.checked) f.autoDoneOff = true;
+      patch(t, f);
+    });
+
+    const body = document.createElement("div"); body.className = "body";
+    const tx = document.createElement("div"); tx.className = "text"; tx.textContent = t.text;
+    body.append(tx);
+
+    const meta = document.createElement("div"); meta.className = "meta";
+    // category tag: tap to change, or make a new one
+    meta.append(tagChip(t));
+    // importance chip: tap to pick High / Medium / Low
+    const pc = document.createElement("label");
+    pc.className = "chip prio " + p;
+    pc.title = "Tap to change importance";
+    pc.textContent = (p === "high" ? "🔴 " : p === "medium" ? "🟡 " : "🟢 ") + PRIO_LABEL[p] + " ▾";
+    const ps = document.createElement("select");
+    ps.setAttribute("aria-label", "Change importance");
+    for (const q of PRIOS) {
+      const o = document.createElement("option"); o.value = q; o.textContent = PRIO_LABEL[q] + " importance";
+      ps.append(o);
+    }
+    ps.value = p;
+    ps.addEventListener("change", () => {
+      if (ps.value !== p) {
+        patch(t, { priority: ps.value });
+        setStatus("Moved “" + t.text + "” to " + PRIO_LABEL[ps.value] + " importance");
+        setTimeout(() => setStatus(""), 2500);
+      }
+    });
+    pc.append(ps);
+    meta.append(pc);
+
+    // date chip: tap → a real date picker appears in its place
+    const dc = document.createElement("button");
+    dc.type = "button";
+    const overdue = t.due && !t.done && dayDiff(t.due) < 0;
+    dc.className = "chip date" + (t.due ? "" : " none") + (overdue ? " overdue" : "");
+    dc.textContent = t.due ? "📅 " + dueLabel(t.due) : "+ date";
+    dc.title = "Tap to change the due date";
+    dc.addEventListener("click", () => openPicker(dc, "date", t.due || "", (v) => {
+      const due = validDue(v);
+      const f = { due };
+      if (due && t.time) f.at = atOf(due, to24(t.time));
+      if (!due) { f.at = null; }
+      return f;
+    }, t));
+    meta.append(dc);
+
+    // time chip: shown when the task has a time, or "+ time" once it has a date
+    if (t.time || t.due) {
+      const tc = document.createElement("button");
+      tc.type = "button";
+      tc.className = "chip exam" + (t.time ? "" : " date none");
+      tc.textContent = t.time ? "🕓 " + t.time : "+ time";
+      tc.title = "Tap to change the time";
+      tc.addEventListener("click", () => openPicker(tc, "time", t.time ? to24(t.time) : "", (v) => {
+        if (!v) return { time: null, at: null };
+        return { time: to12(v), at: t.due ? atOf(t.due, v) : null };
+      }, t));
+      meta.append(tc);
+    }
+    body.append(meta);
+
+    const actions = document.createElement("div"); actions.className = "actions";
+    const ed = document.createElement("button");
+    ed.className = "icon"; ed.textContent = "✎"; ed.title = "Edit text"; ed.setAttribute("aria-label", "Edit task");
+    ed.addEventListener("click", () => startEdit(t, tx));
+    const del = document.createElement("button");
+    del.className = "icon del"; del.textContent = "✕"; del.title = "Delete"; del.setAttribute("aria-label", "Delete task");
+    del.addEventListener("click", () => remove(t));
+    actions.append(ed, del);
+
+    li.append(cb, body, actions);
+    return li;
+  }
+
+  // "16:00" <-> "4:00 PM"
+  function to12(hm) {
+    const [h, m] = hm.split(":").map(Number);
+    const ap = h >= 12 ? "PM" : "AM";
+    return ((h % 12) || 12) + ":" + String(m).padStart(2, "0") + " " + ap;
+  }
+  function to24(label) {
+    const mt = /^(\d{1,2}):(\d{2})\s*([AP]M)$/i.exec(String(label || "").trim());
+    if (!mt) return "";
+    let h = Number(mt[1]) % 12; if (/p/i.test(mt[3])) h += 12;
+    return String(h).padStart(2, "0") + ":" + mt[2];
+  }
+  function atOf(due, hm) {
+    if (!due || !hm) return null;
+    const [y, m, d] = due.split("-").map(Number); const [hh, mm] = hm.split(":").map(Number);
+    return new Date(y, m - 1, d, hh, mm).getTime();
+  }
+
+  // Swap a chip for a visible date/time input, save on change, restore on blur/Esc.
+  function openPicker(chip, type, value, toFields, t) {
+    const wrap = document.createElement("span"); wrap.className = "picker";
+    const inp = document.createElement("input");
+    inp.type = type; inp.className = "date-in"; inp.value = value;
+    inp.setAttribute("aria-label", type === "date" ? "Due date" : "Time");
+    const clr = document.createElement("button");
+    clr.type = "button"; clr.className = "icon"; clr.textContent = "✕";
+    clr.title = type === "date" ? "Remove date" : "Remove time";
+    wrap.append(inp, clr);
+    chip.replaceWith(wrap);
+    editing = true;
+    let closed = false;
+    const close = (fields) => {
+      if (closed) return; closed = true;
+      document.removeEventListener("pointerdown", outside, true);
+      editing = false;
+      if (fields) patch(t, fields); else render();
+    };
+    inp.addEventListener("change", () => { if (inp.value) close(toFields(inp.value)); });
+    inp.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); close(null); } });
+    clr.addEventListener("mousedown", (e) => e.preventDefault());
+    clr.addEventListener("click", () => close(toFields("")));
+    // Close when tapping anywhere else (not on blur — opening the picker can blur the field).
+    const outside = (e) => {
+      if (wrap.contains(e.target)) return;
+      document.removeEventListener("pointerdown", outside, true);
+      close(inp.value && inp.value !== value ? toFields(inp.value) : null);
+    };
+    setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
+    inp.focus();
+    try { inp.showPicker && inp.showPicker(); } catch (e) {}
+  }
+
+  function tagChip(t) {
+    const wrap = document.createElement("label");
+    wrap.className = "chip tag" + (t.tag ? "" : " none");
+    wrap.title = "Tap to change tag";
+    wrap.textContent = tagText(t.tag);
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Change tag");
+    const opt = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
+    for (const g of allTags()) opt(g, tagEmoji(g) + " " + g);
+    opt("__new", "+ New tag…");
+    opt("", "No tag");
+    sel.value = t.tag || "";
+    sel.addEventListener("change", () => {
+      if (sel.value === "__new") {
+        const inp = document.createElement("input");
+        inp.className = "tag-edit"; inp.placeholder = "New tag"; inp.maxLength = 20;
+        wrap.replaceWith(inp);
+        editing = true;
+        inp.focus();
+        let doneOnce = false;
+        const finish = (save) => {
+          if (doneOnce) return; doneOnce = true;
+          editing = false;
+          const v = cleanTag(inp.value);
+          if (save && v && v !== t.tag) patch(t, { tag: v }); else render();
+        };
+        inp.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") { e.preventDefault(); finish(true); }
+          if (e.key === "Escape") { e.preventDefault(); finish(false); }
+        });
+        inp.addEventListener("blur", () => finish(true));
+        return;
+      }
+      const v = sel.value ? sel.value : null;
+      if (v !== (t.tag || null)) patch(t, { tag: v });
+    });
+    wrap.append(sel);
+    return wrap;
+  }
+
+  let editing = false;
+  function startEdit(t, el) {
+    editing = true;
+    el.contentEditable = "true";
+    el.focus();
+    const r = document.createRange(); r.selectNodeContents(el);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    const finish = (save) => {
+      el.removeEventListener("blur", onBlur);
+      el.removeEventListener("keydown", onKey);
+      el.contentEditable = "false";
+      editing = false;
+      const v = el.textContent.trim();
+      if (save && v && v !== t.text) patch(t, { text: v });
+      else { el.textContent = t.text; render(); }
+    };
+    const onBlur = () => finish(true);
+    const onKey = (e) => {
+      if (e.key === "Enter") { e.preventDefault(); finish(true); }
+      if (e.key === "Escape") { e.preventDefault(); finish(false); }
+    };
+    el.addEventListener("blur", onBlur);
+    el.addEventListener("keydown", onKey);
+  }
+
+  async function patch(t, fields) {
+    if (!col) return;
+    try { await col.doc(t.id).update(fields); }
+    catch (e) { setStatus("Couldn't update that task.", true); }
+  }
+  async function remove(t) {
+    if (!col) return;
+    try { await col.doc(t.id).delete(); }
+    catch (e) { setStatus("Couldn't delete that task.", true); }
+  }
+
+  clearDone.addEventListener("click", async () => {
+    if (!col) return;
+    for (const t of tasks.filter(t => t.done)) {
+      try { await col.doc(t.id).delete(); } catch (e) {}
+    }
+  });
+  toggleDone.addEventListener("click", () => { showDone = !showDone; render(); });
+
+  viewSeg.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-v]"); if (!b) return;
+    view = b.dataset.v;
+    try { localStorage.setItem("todo.view3", view); } catch (e) {}
+    render();
+  });
+  function setComposerPrio(p, touched) {
+    composerPrio = p;
+    if (touched) prioTouched = true;
+    for (const b of prioSeg.children) b.classList.toggle("on", b.dataset.p === p);
+  }
+  prioSeg.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-p]"); if (!b) return;
+    setComposerPrio(b.dataset.p, true);
+  });
+
+  // ---- Reading what you say or type: simple keyword rules (no AI, no cost) ----
+  const WEEKDAYS = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"];
+  const MON_RE = "(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+  const DAY_RE = "(sun(?:day)?|mon(?:day)?|tue(?:s(?:day)?)?|wed(?:nesday)?|thu(?:r(?:s(?:day)?)?)?|fri(?:day)?|sat(?:urday)?)";
+
+  const TAG_RULES = [
+    ["Exams", /\b(exams?|tests?|quiz(?:zes)?|midterms?|finals|final exam)\b/i],
+    ["Pet", /\b(cat|cats|kitten|kitty|dog|dogs|puppy|pet|pets|litter|vet|kibble|miso|sora)\b/i],
+    ["Classes", /\b(homework|hw|assignments?|labs?|lab report|readings?|study|studying|essay|paper|projects?|lectures?|class|classes|problem sets?|psets?|reports?|canvas|recitation|professor|office hours|ta)\b/i],
+    ["Job", /\b(resume|résumé|cv|jobs?|interviews?|internships?|applications?|apply|cover letter|shift|recruiter|linkedin|career fair|offer|boss|manager|work)\b/i],
+    ["Car", /\b(car|oil change|tires?|brakes?|acura|ilx|inspection|registration|car wash|mechanic)\b/i],
+    ["Fitness", /\b(gym|workout|work out|lift|lifting|run|running|cardio|leg day|protein)\b/i],
+    ["Health", /\b(doctor|dentist|pharmacy|prescription|meds|medicine|checkup|check-up|appointment with dr)\b/i],
+    ["Money", /\b(rent|bill|bills|bank|venmo|zelle|tuition|pay back|budget|taxes)\b/i],
+    ["Personal", /\b(buy|grocer(?:y|ies)|shop|shopping|call|text|laundry|clean|cleaning|pay|order|pick up|return|haircut|mom|dad|birthday|gift|errands?|pack|book|amazon|target|walmart|costco)\b/i]
+  ];
+
+  function nextWeekday(idx, forceNext) {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    let add = (idx - d.getDay() + 7) % 7;
+    if (forceNext) add = add === 0 ? 7 : add + (add < 1 ? 7 : 0);
+    d.setDate(d.getDate() + add);
+    return isoOf(d);
+  }
+  function plusDays(n) { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + n); return isoOf(d); }
+  function monthIdx(word) { return MONTHS.findIndex(m => m.startsWith(word.toLowerCase().slice(0, 3))); }
+  function dayIdx(word) { return WEEKDAYS.findIndex(w => w.startsWith(word.toLowerCase().slice(0, 3))); }
+  function upcomingDate(m, d) {
+    const now = new Date(); now.setHours(0, 0, 0, 0);
+    let dt = new Date(now.getFullYear(), m, d);
+    if (dt < now) dt = new Date(now.getFullYear() + 1, m, d);
+    return isoOf(dt);
+  }
+
+  // Pull a date out of the text. Returns {due, text} with the date words removed.
+  function takeDate(text) {
+    const pre = "(?:\\b(?:due|by|on|before|for|this|until)\\s+)?";
+    const tries = [
+      [new RegExp(pre + "\\b(today|tonight|this evening|this afternoon)\\b", "i"), () => plusDays(0)],
+      [new RegExp(pre + "\\b(tomorrow|tmrw|tmr)\\b", "i"), () => plusDays(1)],
+      [new RegExp(pre + "\\bday after tomorrow\\b", "i"), () => plusDays(2)],
+      [new RegExp(pre + "\\bin (\\d{1,2}) days?\\b", "i"), (m) => plusDays(Number(m[1]))],
+      [new RegExp(pre + "\\bin a week\\b", "i"), () => plusDays(7)],
+      [new RegExp(pre + "\\b(?:the )?end of (?:the |this )?week\\b", "i"), () => nextWeekday(5)],
+      [new RegExp(pre + "\\b(?:this )?weekend\\b", "i"), () => nextWeekday(6)],
+      [new RegExp(pre + "\\bnext week\\b", "i"), () => nextWeekday(1, true)],
+      [new RegExp(pre + "\\bnext " + DAY_RE + "\\b", "i"), (m) => nextWeekday(dayIdx(m[1]), true)],
+      [new RegExp(pre + "\\b" + MON_RE + "\\.? (\\d{1,2})(?:st|nd|rd|th)?\\b", "i"), (m) => upcomingDate(monthIdx(m[1]), Number(m[2]))],
+      [new RegExp(pre + "\\b(\\d{1,2})(?:st|nd|rd|th)? of " + MON_RE + "\\b", "i"), (m) => upcomingDate(monthIdx(m[2]), Number(m[1]))],
+      [new RegExp(pre + "\\b(\\d{1,2})/(\\d{1,2})\\b"), (m) => upcomingDate(Number(m[1]) - 1, Number(m[2]))],
+      [new RegExp(pre + "\\bthe (\\d{1,2})(?:st|nd|rd|th)\\b", "i"), (m) => {
+        const now = new Date(); now.setHours(0, 0, 0, 0);
+        const day = Number(m[1]);
+        let dt = new Date(now.getFullYear(), now.getMonth(), day);
+        if (dt < now) dt = new Date(now.getFullYear(), now.getMonth() + 1, day);
+        return isoOf(dt);
+      }],
+      [new RegExp(pre + "\\b" + DAY_RE + "\\b", "i"), (m) => nextWeekday(dayIdx(m[1]))]
+    ];
+    for (const [re, fn] of tries) {
+      const m = re.exec(text);
+      if (!m) continue;
+      const due = fn(m);
+      if (!validDue(due)) continue;
+      return { due, text: (text.slice(0, m.index) + " " + text.slice(m.index + m[0].length)) };
+    }
+    return { due: null, text };
+  }
+
+  // Pull a time out ("at 3pm", "3:30 pm", "at 15:00", "at noon").
+  function takeTime(text) {
+    let m = /\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*([ap])\.?m\.?\b/i.exec(text);
+    let hm = null;
+    if (m) {
+      let h = Number(m[1]) % 12; if (/p/i.test(m[3])) h += 12;
+      if (h < 24) hm = String(h).padStart(2, "0") + ":" + (m[2] || "00");
+    } else if ((m = /\bat\s+(\d{1,2}):(\d{2})\b/.exec(text))) {
+      if (Number(m[1]) < 24) hm = m[1].padStart(2, "0") + ":" + m[2];
+    } else if ((m = /\b(?:at\s+)?(noon|midnight)\b/i.exec(text))) {
+      hm = /noon/i.test(m[1]) ? "12:00" : "23:59";
+    }
+    if (!hm) return { hm: null, text };
+    return { hm, text: text.slice(0, m.index) + " " + text.slice(m.index + m[0].length) };
+  }
+
+  function takePriority(text) {
+    const hi = /\b(urgent(?:ly)?|asap|a\.s\.a\.p\.?|important|critical|top priority|high priority|high importance|really need to|must|immediately|right away)\b[:!,]*/i;
+    const lo = /\b(whenever|no rush|not urgent|low priority|low importance|someday|eventually|if i have time|when i get a chance|not important)\b[:,]*/i;
+    const md = /\b(medium priority|medium importance|normal priority)\b[:,]*/i;
+    for (const [re, p] of [[hi, "high"], [lo, "low"], [md, "medium"]]) {
+      const m = re.exec(text);
+      if (m) return { priority: p, text: text.slice(0, m.index) + " " + text.slice(m.index + m[0].length) };
+    }
+    return { priority: null, text };
+  }
+
+  function pickTag(text) {
+    const said = /\b(?:tag(?:ged)?(?: it)?(?: as| under)?|under|for my|category)\s+([a-z]+)\b/i.exec(text);
+    if (said) {
+      const t = cleanTag(said[1]);
+      const known = allTags().find(x => x.toLowerCase() === String(t).toLowerCase());
+      if (known || (t && !/^(the|a|my|it)$/i.test(t))) {
+        return { tag: known || t, text: text.slice(0, said.index) + " " + text.slice(said.index + said[0].length) };
+      }
+    }
+    for (const t of allTags()) {
+      if (BASE_TAGS.includes(t)) continue;
+      if (new RegExp("\\b" + t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(text)) return { tag: t, text };
+    }
+    for (const [tag, re] of TAG_RULES) if (re.test(text)) return { tag, text };
+    return { tag: null, text };
+  }
+
+  function tidy(text) {
+    let t = " " + text + " ";
+    t = t.replace(/\s+(?:to|on|onto) my (?:to-?do )?list\b/gi, " ")
+         .replace(/\s+(?:to|on) the list\b/gi, " ");
+    t = t.trim()
+      .replace(/^(?:(?:hey|ok(?:ay)?|so|um+|uh+|please|also|and|then)[, ]+)+/i, "")
+      .replace(/^(?:add|put|remind me to|remind me|i need to|i have to|i've got to|i gotta|gotta|need to|have to|i should|i want to|don't forget to|to-?do:?|task:?)\s+/i, "")
+      .replace(/^(?:add|put)\s+/i, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/\s+([,.!?])/g, "$1")
+      .replace(/^[\s,.;:!-]+|[\s,.;:!-]+$/g, "")
+      .replace(/\s+(?:by|on|due|at|for|before|is|it's|its)$/i, "")
+      .replace(/^[\s,.;:!-]+|[\s,.;:!-]+$/g, "");
+    return t ? t[0].toUpperCase() + t.slice(1) : t;
+  }
+
+  // Split "buy cat food and call mom, then finish thermo hw" into separate tasks.
+  const VERBS = "buy|get|grab|call|text|email|finish|do|study|submit|pay|clean|book|schedule|send|pick up|make|write|read|go|take|fix|apply|update|order|return|start|review|practice|prepare|turn in|work on|feed|wash|cook|meet|print|sign up|register|cancel|renew|check|drop off";
+  function splitTasks(raw) {
+    const lead = "(?:then\\s+|also\\s+)?(?:i\\s+(?:need|have)\\s+to\\s+|remind me to\\s+|add\\s+)?";
+    const andVerb = new RegExp("\\s+(?:and|also|plus)\\s+(?:also\\s+)?(?=" + lead + "(?:" + VERBS + ")\\b)", "i");
+    return raw.split(/\s*(?:\n|;|\.\s+|,\s*(?:and\s+|then\s+)?(?=\S))\s*/)
+      .flatMap(p => p.split(andVerb))
+      .map(p => p.trim())
+      .filter(Boolean);
+  }
+
+  async function parseTasks(raw, fallbackPrio, fallbackDue) {
+    const pieces = splitTasks(raw);
+    const out = [];
+    for (const piece of pieces) {
+      let t = piece;
+      const p = takePriority(t); t = p.text;
+      const d = takeDate(t); t = d.text;
+      const tm = takeTime(t); t = tm.text;
+      const tg = pickTag(t); t = tg.text;
+      const text = tidy(t);
+      if (!text) continue;
+      const due = d.due || fallbackDue;
+      out.push({
+        text,
+        due,
+        time: tm.hm ? to12(tm.hm) : null,
+        at: tm.hm && due ? atOf(due, tm.hm) : null,
+        priority: prioTouched ? fallbackPrio : (p.priority || fallbackPrio),
+        tag: tg.tag
+      });
+    }
+    return out.length ? out : [{ text: tidy(raw) || raw, due: fallbackDue, priority: fallbackPrio, tag: null }];
+  }
+
+  async function addFrom(raw) {
+    raw = (raw || "").trim();
+    if (!raw || busy) return;
+    if (!col) { setStatus("Your list isn't connected yet — try again in a moment.", true); return; }
+    busy = true; addBtn.disabled = true;
+    setStatus("Adding…");
+    try {
+      const items = await parseTasks(raw, composerPrio, validDue(dueIn.value));
+      for (const it of items) {
+        await col.doc().set({
+          text: it.text, due: it.due, priority: it.priority, tag: it.tag || null,
+          time: it.time || null, at: it.at || null,
+          done: false, createdAt: Date.now(), doneAt: null
+        });
+      }
+      input.value = ""; dueIn.value = "";
+      setComposerPrio("medium"); prioTouched = false;
+      setStatus(items.length === 1 ? "Added “" + items[0].text + "”" : "Added " + items.length + " tasks");
+      setTimeout(() => { if (!busy) setStatus(""); }, 3000);
+    } catch (e) {
+      setStatus(e && e.code === "quota_exceeded" ? "Your list is full — clear some completed tasks." : "Couldn't add that. Try again.", true);
+    } finally {
+      busy = false;
+      addBtn.disabled = !input.value.trim();
+    }
+  }
+
+  // ---- voice review: Claude reads what you said, you confirm ----
+  const review = $("review"), heard = $("heard"), rbody = $("rbody");
+  const rCancel = $("rCancel"), rConfirm = $("rConfirm"), rAddRow = $("rAddRow");
+  let reviewToken = 0;
+
+  function reviewRow(it) {
+    const row = document.createElement("div"); row.className = "rrow";
+    const tx = document.createElement("input"); tx.type = "text"; tx.className = "r-text"; tx.value = it.text; tx.placeholder = "Task";
+    tx.setAttribute("aria-label", "Task text");
+    const tg = document.createElement("input"); tg.type = "text"; tg.className = "r-tag"; tg.value = it.tag || "";
+    tg.placeholder = "🏷️ Tag"; tg.maxLength = 20; tg.setAttribute("aria-label", "Tag"); tg.setAttribute("list", "tagList");
+    const sel = document.createElement("select"); sel.className = "r-prio"; sel.setAttribute("aria-label", "Importance");
+    for (const p of PRIOS) {
+      const o = document.createElement("option"); o.value = p; o.textContent = PRIO_LABEL[p];
+      sel.append(o);
+    }
+    sel.value = it.priority; sel.className = "r-prio " + it.priority;
+    sel.addEventListener("change", () => { sel.className = "r-prio " + sel.value; });
+    const di = document.createElement("input"); di.type = "date"; di.className = "date-in r-due"; di.value = it.due || "";
+    di.setAttribute("aria-label", "Due date");
+    const x = document.createElement("button"); x.type = "button"; x.className = "icon del"; x.textContent = "✕";
+    x.title = "Remove"; x.setAttribute("aria-label", "Remove from this batch");
+    x.addEventListener("click", () => { row.remove(); updateConfirm(); });
+    tx.addEventListener("input", updateConfirm);
+    row.append(tx, tg, sel, di, x);
+    return row;
+  }
+  function reviewItems() {
+    return [...rbody.querySelectorAll(".rrow")].map(r => {
+      const tx = r.querySelector(".r-text"), tg = r.querySelector(".r-tag");
+      const sel = r.querySelector(".r-prio"), di = r.querySelector(".r-due");
+      return { text: tx.value.trim(), tag: cleanTag(tg.value), priority: PRIOS.includes(sel.value) ? sel.value : "medium", due: validDue(di.value) };
+    }).filter(i => i.text);
+  }
+  function updateConfirm() {
+    const n = reviewItems().length;
+    rConfirm.disabled = n === 0;
+    rConfirm.textContent = n > 1 ? "Add " + n + " tasks" : "Add";
+  }
+  function closeReview() {
+    reviewToken++;
+    review.hidden = true; rbody.replaceChildren(); heard.textContent = "";
+  }
+
+  async function reviewFrom(said) {
+    said = (said || "").trim();
+    if (!said) return;
+    const token = ++reviewToken;
+    review.hidden = false;
+    heard.textContent = "“" + said + "”";
+    const th = document.createElement("div"); th.className = "thinking"; th.textContent = "Reading what you said";
+    rbody.replaceChildren(th);
+    rConfirm.disabled = true; rConfirm.textContent = "Add";
+    input.value = ""; addBtn.disabled = true;
+    setStatus("");
+    const items = await parseTasks(said, composerPrio, validDue(dueIn.value));
+    if (token !== reviewToken) return;
+    const dl = $("tagList"); dl.replaceChildren(...allTags().map(g => { const o = document.createElement("option"); o.value = g; return o; }));
+    rbody.replaceChildren(...items.map(reviewRow));
+    updateConfirm();
+    if (!sample || !sampleOk) setStatus("Couldn't auto-read importance/date — set them below.", true);
+    try { review.scrollIntoView({ block: "nearest", behavior: "smooth" }); } catch (e) {}
+  }
+
+  rAddRow.addEventListener("click", () => {
+    if (rbody.querySelector(".thinking")) return;
+    const r = reviewRow({ text: "", priority: "medium", due: null });
+    rbody.append(r); r.querySelector("input").focus(); updateConfirm();
+  });
+  rCancel.addEventListener("click", () => { closeReview(); setStatus(""); });
+  rConfirm.addEventListener("click", async () => {
+    const items = reviewItems();
+    if (!items.length || !col) return;
+    rConfirm.disabled = true;
+    try {
+      for (const it of items) {
+        await col.doc().set({ text: it.text, due: it.due, priority: it.priority, tag: it.tag || null, done: false, createdAt: Date.now(), doneAt: null });
+      }
+      closeReview();
+      dueIn.value = ""; setComposerPrio("medium"); prioTouched = false;
+      setStatus(items.length === 1 ? "Added “" + items[0].text + "”" : "Added " + items.length + " tasks");
+      setTimeout(() => { if (!busy) setStatus(""); }, 3000);
+    } catch (e) {
+      rConfirm.disabled = false;
+      setStatus(e && e.code === "quota_exceeded" ? "Your list is full — clear some completed tasks." : "Couldn't add those. Try again.", true);
+    }
+  });
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    // Hitting Add while the mic is on: stop listening and add what's in the box.
+    if (listening || stopMode) { stopListening("add"); return; }
+    addFrom(input.value);
+  });
+  input.addEventListener("input", () => { addBtn.disabled = busy || !input.value.trim(); });
+
+  // ---- dictation ----
+  let spoken = "", listening = false;
+  let stopMode = null;   // set the moment the user stops: "review" (mic tap) or "add" (Add button)
+  let frozen = "";       // the text on screen at that moment; nothing heard after it counts
+  function stopListening(mode) {
+    if (stopMode) { if (mode === "add") stopMode = "add"; return; }
+    stopMode = mode;
+    frozen = input.value.trim();
+    mic.classList.remove("listening");
+    setStatus("");
+    const finish = () => {
+      if (!stopMode) return;
+      const m = stopMode, said = frozen;
+      stopMode = null; frozen = ""; spoken = ""; listening = false;
+      if (!said) return;
+      addFrom(said);
+    };
+    dict.stop().catch(() => {}).finally(() => { listening = false; finish(); });
+    // in case the mic never reports back
+    setTimeout(finish, 2500);
+  }
+  mic.addEventListener("click", () => {
+    if (!dict) return;
+    if (listening || stopMode) { stopListening("review"); return; }
+    spoken = "";
+    closeReview();
+    dict.start().catch((e) => {
+      if (e && e.code === "not_granted") { mic.hidden = true; setStatus("Microphone not allowed — you can still type.", true); }
+      else setStatus("Couldn't start the mic. Try again.", true);
+    });
+  });
+
+  // ---- Mic: the browser's own speech recognition ----
+  function webDictation() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return null;
+    let rec = null, finals = "", subs = { partial: [], final: [], state: [] }, endWaiters = [];
+    const emit = (k, v) => subs[k].forEach(f => { try { f(v); } catch (e) {} });
+    return {
+      start() {
+        return new Promise((resolve, reject) => {
+          try {
+            rec = new SR();
+            rec.lang = navigator.language || "en-US";
+            rec.continuous = true;
+            rec.interimResults = true;
+            finals = "";
+            let started = false;
+            rec.onstart = () => { started = true; emit("state", { state: "listening" }); resolve(); };
+            rec.onresult = (ev) => {
+              let interim = "";
+              for (let i = ev.resultIndex; i < ev.results.length; i++) {
+                const r = ev.results[i];
+                if (r.isFinal) emit("final", { text: r[0].transcript.trim() });
+                else interim += r[0].transcript;
+              }
+              if (interim.trim()) emit("partial", { text: interim.trim() });
+            };
+            rec.onerror = (ev) => {
+              if (!started) reject({ code: ev.error === "not-allowed" || ev.error === "service-not-allowed" ? "not_granted" : ev.error });
+            };
+            rec.onend = () => {
+              rec = null;
+              emit("state", { state: "idle", reason: "stopped" });
+              endWaiters.splice(0).forEach(f => f());
+            };
+            rec.start();
+          } catch (e) { reject({ code: "failed" }); }
+        });
+      },
+      stop() {
+        return new Promise((resolve) => {
+          if (!rec) return resolve();
+          endWaiters.push(resolve);
+          try { rec.stop(); } catch (e) { resolve(); }
+        });
+      },
+      onPartial(f) { subs.partial.push(f); },
+      onFinal(f) { subs.final.push(f); },
+      onState(f) { subs.state.push(f); }
+    };
+  }
+
+  async function initDictation() {
+    dict = webDictation();
+    if (!dict) return;
+    mic.hidden = false;
+    dict.onPartial(({ text }) => { if (stopMode) return; input.value = (spoken + " " + text).trim(); addBtn.disabled = false; });
+    dict.onFinal(({ text }) => { if (stopMode) return; spoken = (spoken + " " + text).trim(); input.value = spoken; addBtn.disabled = false; });
+    dict.onState(({ state }) => {
+      const now = state === "listening";
+      if (now && !listening) setStatus("Listening… tap the mic again when you’re done.");
+      const wasListening = listening;
+      listening = now;
+      if (!stopMode) mic.classList.toggle("listening", now);
+      // Mic ended by itself (not by the user): treat it like a mic tap.
+      if (!now && wasListening && !stopMode) {
+        const said = (spoken || input.value).trim();
+        spoken = "";
+        if (said) addFrom(said); else setStatus("");
+      }
+    });
+  }
+
+  // ---- Data: Supabase ----
+  const SUPABASE_URL = "https://fdypsglmqidxuxbefrow.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_1k44gbz-BceIJUIi9obGxA_T4B9igIG";
+  const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
+  // app field  <->  database column
+  const FIELD = {
+    text: "text", due: "due", time: "time", at: "at", priority: "priority", tag: "tag",
+    kind: "kind", eventId: "event_id", done: "done", doneAt: "done_at",
+    autoDoneOff: "auto_done_off", createdAt: "created_at"
+  };
+  const COLUMN = Object.fromEntries(Object.entries(FIELD).map(([k, v]) => [v, k]));
+  const toRow = (obj) => {
+    const row = {};
+    for (const [k, v] of Object.entries(obj)) if (FIELD[k]) row[FIELD[k]] = v === undefined ? null : v;
+    return row;
+  };
+  const fromRow = (row) => {
+    const o = {};
+    for (const [k, v] of Object.entries(row)) if (COLUMN[k]) o[COLUMN[k]] = v;
+    if (o.at != null) o.at = Number(o.at);
+    if (o.doneAt != null) o.doneAt = Number(o.doneAt);
+    if (o.createdAt != null) o.createdAt = Number(o.createdAt);
+    return o;
+  };
+
+  // Same shape the rest of the app already uses: doc(id).set/update/delete + onSnapshot.
+  function supaCol(userId) {
+    let rows = new Map();
+    const subs = [], errs = [];
+    const emit = () => {
+      const snap = { docs: [...rows.entries()].map(([id, d]) => ({ id, data: () => d })), metadata: { fromCache: false } };
+      subs.forEach(f => f(snap));
+    };
+    let fetching = null;
+    async function refetch() {
+      if (fetching) return fetching;
+      fetching = (async () => {
+        const { data, error } = await sb.from("tasks").select("*").order("created_at");
+        fetching = null;
+        if (error) { errs.forEach(f => f(error)); return; }
+        rows = new Map(data.map(r => [r.id, fromRow(r)]));
+        emit();
+      })();
+      return fetching;
+    }
+    sb.channel("tasks-" + userId)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tasks", filter: "user_id=eq." + userId }, () => refetch())
+      .subscribe();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) refetch(); });
+    addEventListener("focus", () => refetch());
+    const fail = (error) => { if (error) { refetch(); throw { code: error.code || "failed", message: error.message }; } };
+    return {
+      doc(id) {
+        id = id || crypto.randomUUID();
+        return {
+          id,
+          async set(d) {
+            rows.set(id, { ...d }); emit();
+            const { error } = await sb.from("tasks").upsert({ id, ...toRow(d) });
+            fail(error);
+          },
+          async update(f) {
+            if (rows.has(id)) { rows.set(id, { ...rows.get(id), ...f }); emit(); }
+            const row = toRow(f);
+            if (!Object.keys(row).length) return;
+            const { error } = await sb.from("tasks").update(row).eq("id", id);
+            fail(error);
+          },
+          async delete() {
+            rows.delete(id); emit();
+            const { error } = await sb.from("tasks").delete().eq("id", id);
+            fail(error);
+          }
+        };
+      },
+      onSnapshot(next, err) { subs.push(next); if (err) errs.push(err); refetch(); return () => {}; }
+    };
+  }
+
+  function supaPrefs(userId) {
+    return {
+      async set(d) {
+        await sb.from("prefs").upsert({ user_id: userId, collapsed: d.collapsed || [] });
+      },
+      onSnapshot(next) {
+        sb.from("prefs").select("collapsed").maybeSingle().then(({ data }) => {
+          next({ exists: !!data, data: () => (data ? { collapsed: data.collapsed } : undefined) });
+        });
+        return () => {};
+      }
+    };
+  }
+
+  let started = false;
+  function startList(session) {
+    if (started) return;
+    started = true;
+    const uid = session.user.id;
+    $("auth").hidden = true;
+    $("app").hidden = false;
+    $("who").hidden = false;
+    $("whoEmail").textContent = session.user.email || "";
+    col = supaCol(uid);
+    prefsRef = supaPrefs(uid);
+    prefsRef.onSnapshot((snap) => {
+      if (!snap.exists) return;
+      const arr = (snap.data() || {}).collapsed;
+      if (!Array.isArray(arr)) return;
+      collapsed = new Set(arr.map(String));
+      try { localStorage.setItem("todo.collapsed", JSON.stringify(arr)); } catch (e) {}
+      if (!editing) render();
+    });
+    const timer = setTimeout(() => {
+      if (!loaded) setStatus("Can't reach your list yet — check your connection.", true);
+    }, 10000);
+    col.onSnapshot((snap) => {
+      clearTimeout(timer);
+      if (statusEl.classList.contains("err")) setStatus("");
+      tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      loaded = true;
+      autoFinishExams();
+      if (!editing) render();
+    }, () => {
+      clearTimeout(timer);
+      setStatus("Couldn't load your list. Reload to try again.", true);
+    });
+  }
+
+  // ---- Sign in / create account ----
+  function initAuth() {
+    const authForm = $("auth"), msg = $("authMsg");
+    if (!sb) {
+      authForm.hidden = false;
+      msg.textContent = "Couldn't load. Check your connection and reload.";
+      msg.classList.add("err");
+      return;
+    }
+    let mode = "in";
+    const setMode = (m) => {
+      mode = m;
+      $("authTitle").textContent = m === "in" ? "Sign in" : "Create your account";
+      $("authBtn").textContent = m === "in" ? "Sign in" : "Create account";
+      $("authSwitchText").textContent = m === "in" ? "New here?" : "Already have an account?";
+      $("authSwitch").textContent = m === "in" ? "Create an account" : "Sign in";
+      $("authPass").autocomplete = m === "in" ? "current-password" : "new-password";
+      msg.textContent = ""; msg.classList.remove("err");
+    };
+    $("authSwitch").addEventListener("click", () => setMode(mode === "in" ? "up" : "in"));
+    authForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = $("authEmail").value.trim(), password = $("authPass").value;
+      $("authBtn").disabled = true;
+      msg.classList.remove("err");
+      msg.textContent = mode === "in" ? "Signing in…" : "Creating your account…";
+      try {
+        if (mode === "in") {
+          const { error } = await sb.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+        } else {
+          const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.origin + location.pathname } });
+          if (error) throw error;
+          if (!data.session) {
+            msg.textContent = "Check your email to confirm your account, then sign in here.";
+            setTimeout(() => setMode("in"), 0);
+            setTimeout(() => { msg.textContent = "Check your email to confirm your account, then sign in here."; }, 10);
+          }
+        }
+      } catch (err) {
+        msg.classList.add("err");
+        const m = String((err && err.message) || "");
+        msg.textContent = /invalid login/i.test(m) ? "Wrong email or password."
+          : /not confirmed/i.test(m) ? "Confirm your email first (check your inbox), then sign in."
+          : /already registered/i.test(m) ? "That email already has an account — sign in instead."
+          : m || "Something went wrong. Try again.";
+      } finally {
+        $("authBtn").disabled = false;
+      }
+    });
+    $("signOut").addEventListener("click", async () => {
+      await sb.auth.signOut();
+      location.reload();
+    });
+    sb.auth.onAuthStateChange((_event, session) => {
+      if (session) startList(session);
+    });
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) startList(data.session);
+      else authForm.hidden = false;
+    });
+  }
+
+  // Exams check themselves off once their day is over.
+  const finishing = new Set();
+  async function autoFinishExams() {
+    if (!col) return;
+    const today = todayInfo().iso;
+    for (const t of tasks) {
+      if (t.kind === "exam" && !t.tag && !finishing.has("tag-" + t.id)) {
+        finishing.add("tag-" + t.id);
+        try { await col.doc(t.id).update({ tag: "Exams" }); } catch (e) {}
+      }
+    }
+    for (const t of tasks) {
+      if (t.kind !== "exam" || t.done || t.autoDoneOff || !t.due || t.due >= today || finishing.has(t.id)) continue;
+      finishing.add(t.id);
+      try { await col.doc(t.id).update({ done: true, doneAt: Date.now(), autoDone: true }); } catch (e) {}
+      finishing.delete(t.id);
+    }
+  }
+  setInterval(autoFinishExams, 60000);
+
+  render();
+  initDictation();
+  initAuth();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
