@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117195443">
+<meta name="app-build" content="20261117200316">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -475,6 +475,13 @@
   }
   .theme-btn:hover { border-color: var(--muted); }
   .theme-dot { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0,0,0,.08); vertical-align: middle; }
+  .emoji-pick { padding: 8px 4px 4px; text-align: center; }
+  .emoji-input {
+    width: 96px; height: 96px; font-size: 54px; text-align: center; border: 2px dashed var(--line); border-radius: 22px;
+    background: var(--bg); color: var(--ink); caret-color: var(--accent); outline: none; padding: 0;
+  }
+  .emoji-input:focus { border-color: var(--accent); border-style: solid; }
+  .emoji-input::placeholder { opacity: .45; }
   .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 6px 2px 10px; }
   .emoji-grid button {
     font-size: 24px; line-height: 1; padding: 8px 0; border: none; border-radius: 10px; background: transparent; cursor: pointer;
@@ -1337,10 +1344,6 @@
   }
 
   // ---- pick your own emoji for a tag ----
-  const EMOJI_CHOICES = ["📝","📚","🎓","🧪","💻","📖","✍️","🗂️","💼","🤝","📄","📈","🚀","🛍️","🛒","🧾","🧹","🧺","🏠","📦",
-    "🎁","🎂","🎉","💵","💰","🏦","🩺","💊","🧠","😴","💪","🏃","🧘","🏀","⚽","🏈","🍽️","🍳","🥗","☕",
-    "🧴","💄","💇","👕","👟","🐾","🐱","🐶","👨‍👩‍👧","❤️","🙏","🚗","🔧","✈️","🏖️","🎵","🎸","🎮","📷","🎬",
-    "🎨","🌱","📱","📧","📅","🎯","💡","✅","⭐","🔥","🚨","🌈","🎲","🏷️"];
   function firstEmoji(v) {
     v = String(v || "").trim();
     if (!v) return "";
@@ -1353,20 +1356,33 @@
     saveUi(); render();
     toast(emo ? "“" + tag + "” now uses " + emo : "“" + tag + "” is back to " + autoTagEmoji(tag));
   }
+  // Pick from your phone's own emoji keyboard (or the computer's emoji panel).
+  const isEmoji = (v) => /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(v);
   function emojiPicker(tag) {
-    const cur = tagEmoji(tag);
-    const grid = document.createElement("div"); grid.className = "emoji-grid";
-    for (const e of EMOJI_CHOICES) {
-      const b = document.createElement("button"); b.type = "button"; b.textContent = e;
-      if (e === cur) b.className = "on";
-      b.addEventListener("click", () => { closeSheet(); setTagEmoji(tag, e); });
-      grid.append(b);
-    }
+    const wrap = document.createElement("div"); wrap.className = "emoji-pick";
+    const inp = document.createElement("input");
+    inp.type = "text"; inp.className = "emoji-input"; inp.value = "";
+    inp.placeholder = tagEmoji(tag); inp.setAttribute("aria-label", "Type an emoji");
+    inp.autocomplete = "off"; inp.setAttribute("autocorrect", "off"); inp.setAttribute("enterkeyhint", "done");
+    const hint = document.createElement("p"); hint.className = "dnote";
+    const mac = /Mac/.test(navigator.platform) && !TOUCH, win = /Win/.test(navigator.platform);
+    hint.textContent = TOUCH
+      ? "Tap the box, then tap 😀 (or 🌐) on your keyboard and pick any emoji."
+      : mac ? "Click the box, then press Control + Command + Space and pick an emoji."
+      : win ? "Click the box, then press Windows key + . (period) and pick an emoji."
+      : "Click the box and type or paste an emoji.";
+    inp.addEventListener("input", () => {
+      const e = firstEmoji(inp.value);
+      if (!e) return;
+      if (!isEmoji(e)) { inp.value = ""; hint.textContent = "That's a letter, not an emoji — switch to the 😀 keyboard."; hint.className = "dnote warn"; return; }
+      closeSheet(); setTagEmoji(tag, e);
+    });
+    wrap.append(inp, hint);
     sheet("Emoji for “" + tag + "”", [
-      { el: grid },
-      fieldRow("text", "", "Or paste any emoji 😀", (v) => { const e = firstEmoji(v); if (e) setTagEmoji(tag, e); }),
+      { el: wrap },
       ui.emojis[tag] ? { icon: autoTagEmoji(tag), label: "Use the automatic emoji", run: () => setTagEmoji(tag, null) } : null
     ]);
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 80);
   }
 
   // ---- color themes ----
