@@ -270,6 +270,8 @@
   }
   .icon:hover { opacity: 1; background: var(--bg); }
   .icon.del:hover { color: var(--warn); }
+  a.icon { display: inline-grid; place-items: center; text-decoration: none; }
+  .icon.gcal:hover { color: var(--accent); }
 
   .empty { text-align: center; color: var(--muted); padding: 36px 10px; }
   .done-head {
@@ -279,6 +281,39 @@
   .linkbtn { border: none; background: none; color: var(--muted); text-decoration: underline; padding: 4px; font-size: 14px; }
   .linkbtn:hover { color: var(--ink); }
   #done { margin-top: 8px; }
+  .hdr-right { display: inline-flex; align-items: center; gap: 10px; }
+  .bell {
+    position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
+    background: var(--card); color: var(--ink); display: grid; place-items: center; cursor: pointer;
+  }
+  .bell:hover { border-color: var(--muted); }
+  .bell-dot { position: absolute; top: 7px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .scrim { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 40; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: min(380px, 92vw); z-index: 41;
+    background: var(--card); border-left: 1px solid var(--line); box-shadow: -10px 0 30px rgba(0,0,0,.12);
+    padding: 20px 20px calc(24px + env(safe-area-inset-bottom)); overflow-y: auto;
+    transform: translateX(105%); transition: transform .22s ease;
+  }
+  .drawer.open { transform: translateX(0); }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; }
+  .drawer-head h2 { margin: 0; font-size: 20px; }
+  .dsec { border-top: 1px solid var(--line); margin-top: 18px; padding-top: 16px; }
+  .dsec h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .dnote { font-size: 14px; color: var(--muted); margin: 8px 0; }
+  .dnote.warn { color: var(--warn); }
+  .dnote.ok { color: var(--lo); }
+  .drow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .switch-row, .time-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; font-size: 15px; }
+  .time-row select {
+    border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--card);
+    color: var(--ink); font-size: 15px;
+  }
+  .time-row.off { opacity: .45; pointer-events: none; }
+  .switch { appearance: none; -webkit-appearance: none; width: 46px; height: 28px; border-radius: 999px; background: var(--line); position: relative; cursor: pointer; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: left .15s; }
+  .switch:checked { background: var(--accent); }
+  .switch:checked::after { left: 21px; }
   .who { font-size: 13px; color: var(--muted); margin-top: 4px; }
   .auth {
     margin: 22vh auto 0; width: 100%; max-width: 560px;
@@ -324,7 +359,13 @@
 <main>
   <header>
     <h1>To-Do</h1>
-    <span class="count" id="count"></span>
+    <span class="hdr-right">
+      <span class="count" id="count"></span>
+      <button type="button" class="bell" id="bellBtn" title="Notifications" aria-label="Notification settings" hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="bell-dot" id="bellDot" hidden></span>
+      </button>
+    </span>
   </header>
   <div class="who" id="who" hidden><span id="whoEmail"></span> · <button class="linkbtn" id="signOut">Sign out</button></div>
 
@@ -401,6 +442,41 @@
   <p class="hint">Tap a task’s importance, 🏷️ category or 📅 date tag to change it anytime · tap a category above the list to filter · ✎ to edit text</p>
   </div>
 </main>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="drawer" id="drawer" aria-hidden="true" aria-label="Notification settings">
+  <div class="drawer-head">
+    <h2>🔔 Notifications</h2>
+    <button type="button" class="icon" id="drawerClose" aria-label="Close">✕</button>
+  </div>
+
+  <section class="dsec">
+    <h3>This device</h3>
+    <p class="dnote" id="devStatus">Checking…</p>
+    <p class="dnote warn" id="iosHint" hidden>On iPhone, notifications only work in the app from your Home Screen: open this page in Safari → Share → <b>Add to Home Screen</b>, then open it from that icon.</p>
+    <div class="drow">
+      <button type="button" class="add" id="devOn">Turn on notifications</button>
+      <button type="button" class="ghost" id="devOff" hidden>Turn off on this device</button>
+    </div>
+  </section>
+
+  <section class="dsec">
+    <h3>Daily reminder</h3>
+    <label class="switch-row">
+      <span>Notify me about tasks due that day</span>
+      <input type="checkbox" id="dailyOn" class="switch">
+    </label>
+    <label class="time-row">
+      <span>Every day at</span>
+      <select id="dailyTime" aria-label="Daily reminder time"></select>
+    </label>
+    <p class="dnote">You get one notification for each task due that day, most important first. Nothing is sent on days with no tasks.</p>
+    <div class="drow">
+      <button type="button" class="ghost" id="testBtn">Send a test now</button>
+    </div>
+    <p class="dnote" id="notifyMsg"></p>
+  </section>
+</aside>
 
 <script>
 (() => {
@@ -755,6 +831,13 @@
     const del = document.createElement("button");
     del.className = "icon del"; del.textContent = "✕"; del.title = "Delete"; del.setAttribute("aria-label", "Delete task");
     del.addEventListener("click", () => remove(t));
+    if (t.due && !t.done) {
+      const gc = document.createElement("a");
+      gc.className = "icon gcal"; gc.href = gcalLink(t); gc.target = "_blank"; gc.rel = "noopener";
+      gc.title = "Add to Google Calendar"; gc.setAttribute("aria-label", "Add to Google Calendar");
+      gc.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="9.5" y1="16.5" x2="14.5" y2="16.5"/></svg>';
+      actions.append(gc);
+    }
     actions.append(ed, del);
 
     li.append(cb, body, actions);
@@ -811,6 +894,26 @@
     setTimeout(() => document.addEventListener("pointerdown", outside, true), 0);
     inp.focus();
     try { inp.showPicker && inp.showPicker(); } catch (e) {}
+  }
+
+  // Opens Google Calendar with the task filled in; you just press Save.
+  function gcalLink(t) {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const d = t.due.replace(/-/g, "");
+    let dates;
+    const hm = t.time ? to24(t.time) : "";
+    if (hm) {
+      const [h, m] = hm.split(":").map(Number);
+      const end = new Date(2000, 0, 1, h + 1, m);
+      const endDay = h + 1 >= 24 ? (() => { const [y, mo, da] = t.due.split("-").map(Number); return isoOf(new Date(y, mo - 1, da + 1)).replace(/-/g, ""); })() : d;
+      dates = d + "T" + hm.replace(":", "") + "00/" + endDay + "T" + String(end.getHours()).padStart(2, "0") + String(end.getMinutes()).padStart(2, "0") + "00";
+    } else {
+      const [y, mo, da] = t.due.split("-").map(Number);
+      dates = d + "/" + isoOf(new Date(y, mo - 1, da + 1)).replace(/-/g, "");
+    }
+    const details = ["From To-Do", PRIO_LABEL[prioOf(t)] + " importance", t.tag ? "Tag: " + t.tag : ""].filter(Boolean).join(" · ");
+    const q = new URLSearchParams({ action: "TEMPLATE", text: t.text, dates, details, ctz: tz });
+    return "https://calendar.google.com/calendar/render?" + q.toString();
   }
 
   function tagChip(t) {
@@ -1391,12 +1494,139 @@
         await sb.from("prefs").upsert({ user_id: userId, collapsed: d.collapsed || [] });
       },
       onSnapshot(next) {
-        sb.from("prefs").select("collapsed").maybeSingle().then(({ data }) => {
-          next({ exists: !!data, data: () => (data ? { collapsed: data.collapsed } : undefined) });
+        sb.from("prefs").select("collapsed, notify_enabled, notify_time, tz").maybeSingle().then(({ data }) => {
+          next({ exists: !!data, data: () => (data ? { ...data } : undefined) });
         });
         return () => {};
       }
     };
+  }
+
+  // ---- Notifications ----
+  const VAPID_PUBLIC = "BJbb9leaqSd9DcIgEMuemY2Fli4WqcyOdJ4X0Vp-6x8QBYf5xaB2mORQTWNFGz1qzpQELhIEpswny3DxxutsLjc";
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+  let notifyUid = null;
+  let notifyPrefs = { notify_enabled: false, notify_time: "08:00" };
+
+  function b64ToBytes(b64) {
+    const pad = "=".repeat((4 - b64.length % 4) % 4);
+    const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(raw, c => c.charCodeAt(0));
+  }
+  function fillTimes() {
+    const sel = $("dailyTime");
+    if (sel.options.length) return;
+    for (let h = 5; h <= 23; h++) for (const m of [0, 15, 30, 45]) {
+      const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+      const o = document.createElement("option"); o.value = v; o.textContent = to12(v); sel.append(o);
+    }
+  }
+  function loadNotifyPrefs(p) {
+    if (!p) return;
+    notifyPrefs = { notify_enabled: !!p.notify_enabled, notify_time: p.notify_time || "08:00" };
+    fillTimes();
+    $("dailyOn").checked = notifyPrefs.notify_enabled;
+    if (![...$("dailyTime").options].some(o => o.value === notifyPrefs.notify_time)) {
+      const o = document.createElement("option"); o.value = notifyPrefs.notify_time; o.textContent = to12(notifyPrefs.notify_time); $("dailyTime").append(o);
+    }
+    $("dailyTime").value = notifyPrefs.notify_time;
+    $("dailyTime").closest(".time-row").classList.toggle("off", !notifyPrefs.notify_enabled);
+  }
+  async function saveNotifyPrefs(fields) {
+    Object.assign(notifyPrefs, fields);
+    loadNotifyPrefs(notifyPrefs);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/New_York";
+    const { error } = await sb.from("prefs").upsert({ user_id: notifyUid, ...fields, tz });
+    const msg = $("notifyMsg");
+    if (error) { msg.textContent = "Couldn't save. Try again."; msg.className = "dnote warn"; return false; }
+    msg.textContent = notifyPrefs.notify_enabled ? "Saved ✓ Daily reminder at " + to12(notifyPrefs.notify_time) + "." : "Saved ✓ Daily reminder is off.";
+    msg.className = "dnote ok";
+    return true;
+  }
+  async function currentSub() {
+    if (!pushSupported) return null;
+    try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch (e) { return null; }
+  }
+  async function refreshDevice() {
+    const st = $("devStatus"), on = $("devOn"), off = $("devOff");
+    $("iosHint").hidden = !(isIOS && !isStandalone);
+    if (!pushSupported) {
+      st.textContent = isIOS && !isStandalone ? "Add To-Do to your Home Screen first." : "This browser can't receive notifications.";
+      on.hidden = true; off.hidden = true; $("bellDot").hidden = true; return;
+    }
+    if (Notification.permission === "denied") {
+      st.textContent = "Notifications are blocked for this site. Allow them in your phone or browser settings, then come back.";
+      st.className = "dnote warn"; on.hidden = true; off.hidden = true; $("bellDot").hidden = true; return;
+    }
+    const sub = await currentSub();
+    st.className = "dnote" + (sub ? " ok" : "");
+    st.textContent = sub ? "On ✓ This device will get your reminders." : "Off. Turn it on to get reminders on this device.";
+    on.hidden = !!sub; off.hidden = !sub;
+    $("bellDot").hidden = !!sub;
+  }
+  async function turnOnDevice() {
+    const st = $("devStatus");
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") { await refreshDevice(); return; }
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(VAPID_PUBLIC) });
+      const j = sub.toJSON();
+      const { error } = await sb.from("push_subscriptions").upsert(
+        { user_id: notifyUid, endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth },
+        { onConflict: "user_id,endpoint" });
+      if (error) throw error;
+      if (!notifyPrefs.notify_enabled) await saveNotifyPrefs({ notify_enabled: true, notify_time: $("dailyTime").value || "08:00" });
+    } catch (e) {
+      st.textContent = "Couldn't turn on notifications here. " + ((e && e.message) || "");
+      st.className = "dnote warn";
+      return;
+    }
+    await refreshDevice();
+  }
+  async function turnOffDevice() {
+    const sub = await currentSub();
+    if (sub) {
+      await sb.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
+      try { await sub.unsubscribe(); } catch (e) {}
+    }
+    await refreshDevice();
+  }
+  function openDrawer(open) {
+    $("drawer").classList.toggle("open", open);
+    $("drawer").setAttribute("aria-hidden", String(!open));
+    $("scrim").hidden = !open;
+    if (open) refreshDevice();
+  }
+  function initNotifications(uid) {
+    notifyUid = uid;
+    fillTimes();
+    $("dailyTime").value = notifyPrefs.notify_time;
+    $("bellBtn").hidden = false;
+    $("bellBtn").addEventListener("click", () => openDrawer(true));
+    $("drawerClose").addEventListener("click", () => openDrawer(false));
+    $("scrim").addEventListener("click", () => openDrawer(false));
+    addEventListener("keydown", (e) => { if (e.key === "Escape") openDrawer(false); });
+    $("devOn").addEventListener("click", turnOnDevice);
+    $("devOff").addEventListener("click", turnOffDevice);
+    $("dailyOn").addEventListener("change", () => saveNotifyPrefs({ notify_enabled: $("dailyOn").checked, notify_time: $("dailyTime").value }));
+    $("dailyTime").addEventListener("change", () => saveNotifyPrefs({ notify_enabled: $("dailyOn").checked, notify_time: $("dailyTime").value }));
+    $("testBtn").addEventListener("click", async () => {
+      const msg = $("notifyMsg"), btn = $("testBtn");
+      btn.disabled = true; msg.className = "dnote"; msg.textContent = "Sending…";
+      try {
+        const { data, error } = await sb.functions.invoke("notify", { body: { action: "test" } });
+        if (error) throw error;
+        if (!data.devices) { msg.className = "dnote warn"; msg.textContent = "No devices are turned on yet — tap “Turn on notifications” first."; }
+        else { msg.className = "dnote ok"; msg.textContent = "Sent ✓ " + (data.tasks ? data.tasks + " task" + (data.tasks > 1 ? "s" : "") + " due today." : "Nothing due today, so you got a test message."); }
+      } catch (e) {
+        msg.className = "dnote warn"; msg.textContent = "Couldn't send a test. Try again in a moment.";
+      } finally { btn.disabled = false; }
+    });
+    refreshDevice();
   }
 
   let started = false;
@@ -1411,7 +1641,9 @@
     $("whoEmail").textContent = session.user.email || "";
     col = supaCol(uid);
     prefsRef = supaPrefs(uid);
+    initNotifications(uid);
     prefsRef.onSnapshot((snap) => {
+      if (snap.exists) loadNotifyPrefs(snap.data());
       if (!snap.exists) return;
       const arr = (snap.data() || {}).collapsed;
       if (!Array.isArray(arr)) return;
