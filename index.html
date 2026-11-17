@@ -606,17 +606,54 @@
   const prioSeg = $("prioSeg"), viewSeg = $("viewSeg");
 
   const BASE_TAGS = ["Exams", "Classes", "Job", "Personal", "Pet"];
+  // Emoji for a tag: exact name first, then any word in it, then a word that starts the same.
   const TAG_EMOJI = {
-    exams: "📝", classes: "📚", job: "💼", personal: "🛍️", pet: "🐾",
-    health: "🩺", fitness: "💪", car: "🚗", food: "🍽️", money: "💵",
-    home: "🏠", errands: "🧾", travel: "✈️", social: "🎉", gaming: "🎮", skincare: "🧴"
+    // school & work
+    exams: "📝", exam: "📝", test: "📝", tests: "📝", quiz: "📝", quizzes: "📝", midterm: "📝", final: "📝", finals: "📝",
+    classes: "📚", class: "📚", school: "📚", homework: "📚", hw: "📚", study: "📚", studying: "📚", course: "📚", lecture: "📚", college: "🎓", university: "🎓", uni: "🎓", graduation: "🎓", grad: "🎓",
+    lab: "🧪", labs: "🧪", chemistry: "🧪", chem: "🧪", biology: "🧬", bio: "🧬", physics: "⚛️", math: "➗", calculus: "➗", engineering: "⚙️", thermo: "🔥", thermodynamics: "🔥", dynamics: "⚙️", materials: "🧱",
+    coding: "💻", code: "💻", programming: "💻", cs: "💻", computer: "💻", tech: "💻", python: "🐍", research: "🔬", science: "🔬", reading: "📖", read: "📖", books: "📖", book: "📖", writing: "✍️", essay: "✍️", paper: "📄", project: "🗂️", projects: "🗂️",
+    job: "💼", jobs: "💼", work: "💼", career: "💼", internship: "💼", interview: "🤝", interviews: "🤝", resume: "📄", networking: "🤝", meeting: "📅", meetings: "📅", business: "📈", side: "🚀", startup: "🚀",
+    // life admin
+    personal: "🛍️", errands: "🧾", errand: "🧾", chores: "🧹", chore: "🧹", cleaning: "🧹", clean: "🧹", laundry: "🧺", home: "🏠", house: "🏠", apartment: "🏠", dorm: "🏠", room: "🛏️", move: "📦", moving: "📦", packages: "📦", mail: "📬",
+    shopping: "🛒", shop: "🛒", groceries: "🛒", grocery: "🛒", buy: "🛒", amazon: "📦", gifts: "🎁", gift: "🎁", birthday: "🎂", birthdays: "🎂", holiday: "🎄", christmas: "🎄", thanksgiving: "🦃", party: "🎉", events: "🎟️", event: "🎟️",
+    money: "💵", finance: "💵", finances: "💵", bills: "🧾", bill: "🧾", bank: "🏦", budget: "💰", rent: "🏠", taxes: "🧾", tax: "🧾", savings: "🐷", investing: "📈", invest: "📈", crypto: "🪙",
+    // health & body
+    health: "🩺", doctor: "🩺", dentist: "🦷", medical: "🩺", meds: "💊", medicine: "💊", pharmacy: "💊", therapy: "🧠", mental: "🧠", selfcare: "🧖", "self care": "🧖", sleep: "😴",
+    fitness: "💪", gym: "💪", workout: "💪", lifting: "🏋️", lift: "🏋️", run: "🏃", running: "🏃", cardio: "🏃", yoga: "🧘", sports: "🏀", basketball: "🏀", soccer: "⚽", football: "🏈", fantasy: "🏈", tennis: "🎾", swim: "🏊", swimming: "🏊", hike: "🥾", hiking: "🥾", bike: "🚴", cycling: "🚴",
+    food: "🍽️", meal: "🍽️", meals: "🍽️", cooking: "🍳", cook: "🍳", recipes: "🍳", recipe: "🍳", nutrition: "🥗", diet: "🥗", macros: "🥗", protein: "🍗", coffee: "☕", baking: "🧁",
+    skincare: "🧴", skin: "🧴", beauty: "💄", makeup: "💄", hair: "💇", haircut: "💇", fashion: "👕", clothes: "👕", outfit: "👕", shoes: "👟", style: "👕",
+    // people & pets
+    pet: "🐾", pets: "🐾", cat: "🐱", cats: "🐱", kitten: "🐱", dog: "🐶", dogs: "🐶", puppy: "🐶", vet: "🐾", fish: "🐠", bird: "🐦",
+    family: "👨‍👩‍👧", mom: "👩", dad: "👨", parents: "👨‍👩‍👧", friends: "🧑‍🤝‍🧑", friend: "🧑‍🤝‍🧑", social: "🎉", dating: "❤️", date: "❤️", relationship: "❤️", love: "❤️", baby: "👶", kids: "🧒",
+    church: "⛪", faith: "🙏", prayer: "🙏", volunteer: "🤲", volunteering: "🤲", club: "🎯", clubs: "🎯",
+    // things & hobbies
+    car: "🚗", cars: "🚗", auto: "🚗", vehicle: "🚗", oil: "🛢️", gas: "⛽", tires: "🛞", mechanic: "🔧", repair: "🔧", repairs: "🔧", fix: "🔧", diy: "🔨", tools: "🔨",
+    travel: "✈️", trip: "✈️", trips: "✈️", flight: "✈️", flights: "✈️", vacation: "🏖️", beach: "🏖️", hotel: "🏨", passport: "🛂", visa: "🛂",
+    music: "🎵", guitar: "🎸", piano: "🎹", concert: "🎤", singing: "🎤", band: "🎸", spotify: "🎧", podcast: "🎙️",
+    "video games": "🎮", "spring break": "🏖️", "side hustle": "🚀", "self-care": "🧖", break: "🏖️",
+    gaming: "🎮", games: "🎮", game: "🎮", videogames: "🎮", pc: "🖥️", hardware: "🖥️", build: "🛠️",
+    photography: "📷", photo: "📷", photos: "📷", camera: "📷", video: "🎬", videos: "🎬", film: "🎬", movies: "🍿", movie: "🍿", tv: "📺", shows: "📺", youtube: "▶️",
+    art: "🎨", drawing: "✏️", design: "🎨", crafts: "🧶", knitting: "🧶", garden: "🌱", gardening: "🌱", plants: "🪴", plant: "🪴",
+    phone: "📱", apps: "📱", email: "📧", emails: "📧", calls: "📞", call: "📞", admin: "🗃️", paperwork: "🗃️", documents: "🗃️", forms: "📋", appointments: "📅", appointment: "📅",
+    goals: "🎯", goal: "🎯", ideas: "💡", idea: "💡", habits: "✅", habit: "✅", urgent: "🚨", important: "⭐", someday: "🌈", misc: "🗂️", other: "🗂️", random: "🎲", learning: "🧠", learn: "🧠", language: "🗣️", spanish: "🇪🇸", english: "🇺🇸"
   };
-  function cleanTag(v) {
-    v = String(v || "").replace(/[^\p{L}\p{N} &-]/gu, "").trim().slice(0, 20);
-    if (!v) return null;
-    return v.split(/\s+/).map(w => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-  }
-  const tagEmoji = (tag) => TAG_EMOJI[String(tag || "").toLowerCase()] || "🏷️";
+  const tagEmoji = (tag) => {
+    const name = String(tag || "").toLowerCase().trim();
+    if (!name) return "🏷️";
+    if (TAG_EMOJI[name]) return TAG_EMOJI[name];
+    const words = name.split(/[\s&\/,+-]+/).filter(Boolean);
+    for (const w of words) if (TAG_EMOJI[w]) return TAG_EMOJI[w];
+    for (const w of words) {                       // "workouts" → workout, "photographs" → photo…
+      const stem = w.replace(/(ing|es|s)$/, "");
+      if (TAG_EMOJI[stem]) return TAG_EMOJI[stem];
+      if (w.length >= 4) {
+        const k = Object.keys(TAG_EMOJI).find(key => key.length >= 4 && (w.startsWith(key) || key.startsWith(w)));
+        if (k) return TAG_EMOJI[k];
+      }
+    }
+    return "🏷️";
+  };
   const tagText = (tag) => tag ? tagEmoji(tag) + " " + tag : "+ tag";
   function allTags() {
     const set = new Set(BASE_TAGS);
