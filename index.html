@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261117204242">
+<meta name="app-build" content="20261118034442">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -490,6 +490,29 @@
   }
   .emoji-grid button:hover, .emoji-grid button:active { background: var(--bg); }
   .emoji-grid button.on { background: var(--date-bg); box-shadow: inset 0 0 0 2px var(--accent); }
+  /* ---- tabs ---- */
+  .tabs { display: flex; gap: 4px; margin-top: 18px; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+  .tabs button {
+    flex: 1; border: none; background: transparent; color: var(--muted); font: inherit; font-size: 16px; font-weight: 600;
+    padding: 10px 8px; border-radius: 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); }
+  .tab-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--hi); color: #fff; font-size: 12px; display: inline-grid; place-items: center; }
+  .tabs button.on .tab-badge { background: var(--accent-ink); color: var(--accent); }
+  /* ---- dailies ---- */
+  .daily-progress { margin: 16px 2px 6px; }
+  .dp-text { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+  .dp-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .dp-fill { height: 100%; width: 0; background: var(--accent); border-radius: 999px; transition: width .3s; }
+  #habitList { margin-top: 12px; }
+  .item.habit { border-left-color: var(--accent); }
+  .item.habit.done .text { color: var(--done); text-decoration: line-through; }
+  .chip.streak { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+  .hchip { position: relative; cursor: pointer; }
+  .hchip select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; font-size: 16px; }
+  .chip.remind { background: var(--date-bg); color: var(--date-ink); }
+  .chip.remind.off { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .habit-edit { flex: 1; min-width: 0; font: inherit; font-size: 16px; border: 1px solid var(--accent); border-radius: 8px; padding: 2px 6px; background: transparent; color: var(--ink); }
   .hint { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
 </head>
@@ -549,6 +572,11 @@
     </p>
   </form>
   <div id="app" hidden>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" data-tab="tasks" class="on" aria-selected="true">📋 To-Do</button>
+    <button type="button" role="tab" data-tab="dailies" aria-selected="false">🔁 Dailies <span class="tab-badge" id="dailyBadge" hidden></span></button>
+  </nav>
+  <div id="tasksTab">
 
   <form class="composer" id="form" autocomplete="off">
     <div class="row1">
@@ -605,6 +633,27 @@
   <ul class="list" id="done" hidden></ul>
 
   <p class="hint">Tap a task’s importance, 🏷️ category or 📅 date tag to change it anytime · tap a category above the list to filter · ✎ to edit text</p>
+  </div>
+
+  <div id="dailiesTab" hidden>
+    <form class="composer" id="habitForm" autocomplete="off">
+      <div class="row1">
+        <input id="habitInput" maxlength="200" placeholder="Add a daily… e.g. “drink water”" aria-label="New daily" enterkeyhint="done">
+        <button type="submit" class="add" id="habitAdd" disabled>Add</button>
+      </div>
+      <div class="row2">
+        <span class="lbl">🔔 Remind me at</span>
+        <select id="habitTime" class="date-in" aria-label="Reminder time"></select>
+      </div>
+    </form>
+    <div class="daily-progress" id="dailyProgress" hidden>
+      <div class="dp-text" id="dailyProgressText"></div>
+      <div class="dp-bar"><div class="dp-fill" id="dailyProgressFill"></div></div>
+    </div>
+    <ul class="list" id="habitList"></ul>
+    <div class="empty" id="habitEmpty" hidden>No dailies yet.<br>Add things you want to do every day, like 💧 drink water or 💪 go to the gym.</div>
+    <p class="hint">Dailies reset every night at midnight. If one isn't checked off by its time, you'll get a notification (turn them on with the 🔔 bell). Tap a daily to check it off · tap 🔔 to change its time.</p>
+  </div>
   </div>
 </main>
 
@@ -717,6 +766,7 @@
     shopping: "🛒", shop: "🛒", groceries: "🛒", grocery: "🛒", buy: "🛒", amazon: "📦", gifts: "🎁", gift: "🎁", birthday: "🎂", birthdays: "🎂", holiday: "🎄", christmas: "🎄", thanksgiving: "🦃", party: "🎉", events: "🎟️", event: "🎟️",
     money: "💵", finance: "💵", finances: "💵", bills: "🧾", bill: "🧾", bank: "🏦", budget: "💰", rent: "🏠", taxes: "🧾", tax: "🧾", savings: "🐷", investing: "📈", invest: "📈", crypto: "🪙",
     // health & body
+    water: "💧", hydrate: "💧", hydration: "💧", vitamins: "💊", stretch: "🧘", stretching: "🧘", meditate: "🧘", meditation: "🧘", journal: "📓", journaling: "📓", walk: "🚶", steps: "👟", floss: "🦷", habits: "🔁", dailies: "🔁", daily: "🔁",
     health: "🩺", doctor: "🩺", dentist: "🦷", medical: "🩺", meds: "💊", medicine: "💊", pharmacy: "💊", therapy: "🧠", mental: "🧠", selfcare: "🧖", "self care": "🧖", sleep: "😴",
     fitness: "💪", gym: "💪", workout: "💪", lifting: "🏋️", lift: "🏋️", run: "🏃", running: "🏃", cardio: "🏃", yoga: "🧘", sports: "🏀", basketball: "🏀", soccer: "⚽", football: "🏈", fantasy: "🏈", tennis: "🎾", swim: "🏊", swimming: "🏊", hike: "🥾", hiking: "🥾", bike: "🚴", cycling: "🚴",
     food: "🍽️", meal: "🍽️", meals: "🍽️", cooking: "🍳", cook: "🍳", recipes: "🍳", recipe: "🍳", nutrition: "🥗", diet: "🥗", macros: "🥗", protein: "🍗", coffee: "☕", baking: "🧁",
@@ -996,8 +1046,9 @@
     doneEl.replaceChildren(...done.map(itemEl));
 
     emptyEl.hidden = !loaded || open.length > 0;
-    const hi = open.filter(t => prioOf(t) === "high").length;
-    countEl.textContent = loaded ? open.length + " left" + (hi ? " · " + hi + " high" : "") : "";
+    // Header: how many tasks are still left for today (due today or overdue, not checked off).
+    const leftToday = allOpen.filter(t => t.due && dayDiff(t.due) <= 0).length;
+    countEl.textContent = loaded ? (leftToday ? leftToday + " left today" : "Nothing left today 🎉") : "";
     doneHead.hidden = done.length === 0;
     doneEl.hidden = !showDone || done.length === 0;
     toggleDone.textContent = (showDone ? "Hide" : "Show") + " completed (" + done.length + ")";
@@ -1534,8 +1585,8 @@
     ["Classes", /\b(homework|hw|assignments?|labs?|lab report|readings?|study|studying|essay|paper|projects?|lectures?|class|classes|problem sets?|psets?|reports?|canvas|recitation|professor|office hours|ta)\b/i],
     ["Job", /\b(resume|résumé|cv|jobs?|interviews?|internships?|applications?|apply|cover letter|shift|recruiter|linkedin|career fair|offer|boss|manager|work)\b/i],
     ["Car", /\b(car|oil change|tires?|brakes?|acura|ilx|inspection|registration|car wash|mechanic)\b/i],
-    ["Fitness", /\b(gym|workout|work out|lift|lifting|run|running|cardio|leg day|protein)\b/i],
-    ["Health", /\b(doctor|dentist|pharmacy|prescription|meds|medicine|checkup|check-up|appointment with dr)\b/i],
+    ["Fitness", /\b(gym|workout|work out|lift|lifting|run|running|cardio|leg day|protein|stretch|stretching|walk|steps|pushups|push-ups|situps|abs|yoga|swim|bike)\b/i],
+    ["Health", /\b(doctor|dentist|pharmacy|prescription|meds|medicine|pills?|vitamins?|checkup|check-up|appointment with dr|water|hydrate|drink water|sleep|bedtime|floss|brush teeth|meditate|meditation|journal|skincare|sunscreen)\b/i],
     ["Money", /\b(rent|bill|bills|bank|venmo|zelle|tuition|pay back|budget|taxes)\b/i],
     ["Personal", /\b(buy|grocer(?:y|ies)|shop|shopping|call|text|laundry|clean|cleaning|pay|order|pick up|return|haircut|mom|dad|birthday|gift|errands?|pack|book|amazon|target|walmart|costco)\b/i]
   ];
@@ -2091,6 +2142,7 @@
     }
     $("dailyTime").value = notifyPrefs.notify_time;
     $("dailyTime").closest(".time-row").classList.toggle("off", !notifyPrefs.notify_enabled);
+    if (typeof renderHabits === "function" && habitsUid) { fillHabitTimes($("habitTime"), $("habitTime").value); renderHabits(); }
   }
   async function saveNotifyPrefs(fields) {
     Object.assign(notifyPrefs, fields);
@@ -2209,6 +2261,7 @@
     col = supaCol(uid);
     prefsRef = supaPrefs(uid);
     initNotifications(uid);
+    startHabits(uid);
     prefsRef.onSnapshot((snap) => {
       if (snap.exists) loadNotifyPrefs(snap.data());
       const sv = snap.exists && snap.data() && snap.data().ui;
@@ -2241,6 +2294,204 @@
       setStatus("Couldn't load your list. Reload to try again.", true);
     });
   }
+
+  // ================= Dailies (repeat every day) =================
+  let habits = [], habitChecks = new Map();   // habit id -> Set of "YYYY-MM-DD"
+  let habitsUid = null, habitsLoaded = false, habitEditing = false;
+  let currentTab = "tasks";
+  try { if (localStorage.getItem("todo.tab") === "dailies") currentTab = "dailies"; } catch (e) {}
+
+  function showTab(name) {
+    currentTab = name;
+    try { localStorage.setItem("todo.tab", name); } catch (e) {}
+    for (const b of document.querySelectorAll(".tabs button")) {
+      const on = b.dataset.tab === name;
+      b.classList.toggle("on", on); b.setAttribute("aria-selected", String(on));
+    }
+    $("tasksTab").hidden = name !== "tasks";
+    $("dailiesTab").hidden = name !== "dailies";
+    if (name === "dailies") renderHabits();
+  }
+  for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
+
+  const habitTimeLabel = (h) => !h.remind ? "No reminder" : to12(h.remind_time || notifyPrefs.notify_time || "08:00");
+  function fillHabitTimes(sel, current) {
+    sel.replaceChildren();
+    const add = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
+    add("", "My daily reminder time (" + to12(notifyPrefs.notify_time || "08:00") + ")");
+    for (let h = 5; h <= 23; h++) for (const m of [0, 15, 30, 45]) {
+      const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0"); add(v, to12(v));
+    }
+    add("off", "No reminder");
+    sel.value = current ?? "";
+  }
+  function streakOf(id) {
+    const days = habitChecks.get(id) || new Set();
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    if (!days.has(isoOf(d))) d.setDate(d.getDate() - 1);     // not done yet today: count up to yesterday
+    let n = 0;
+    while (days.has(isoOf(d))) { n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+  const doneToday = (id) => (habitChecks.get(id) || new Set()).has(todayInfo().iso);
+
+  let habitFetch = null;
+  async function loadHabits() {
+    if (!sb || !habitsUid) return;
+    if (habitFetch) return habitFetch;
+    habitFetch = (async () => {
+      const since = (() => { const d = new Date(); d.setDate(d.getDate() - 400); return isoOf(d); })();
+      const [h, c] = await Promise.all([
+        sb.from("habits").select("*").order("created_at"),
+        sb.from("habit_checks").select("habit_id, day").gte("day", since)
+      ]);
+      habitFetch = null;
+      if (h.error || c.error) return;
+      habits = h.data;
+      habitChecks = new Map();
+      for (const r of c.data) { if (!habitChecks.has(r.habit_id)) habitChecks.set(r.habit_id, new Set()); habitChecks.get(r.habit_id).add(r.day); }
+      habitsLoaded = true;
+      if (!habitEditing) renderHabits();
+    })();
+    return habitFetch;
+  }
+  function startHabits(uid) {
+    habitsUid = uid;
+    fillHabitTimes($("habitTime"), "");
+    sb.channel("dailies-" + uid)
+      .on("postgres_changes", { event: "*", schema: "public", table: "habits", filter: "user_id=eq." + uid }, () => loadHabits())
+      .on("postgres_changes", { event: "*", schema: "public", table: "habit_checks", filter: "user_id=eq." + uid }, () => loadHabits())
+      .subscribe();
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadHabits(); });
+    // the day rolls over at midnight: redraw so yesterday's checks clear
+    let lastDay = todayInfo().iso;
+    setInterval(() => { const d = todayInfo().iso; if (d !== lastDay) { lastDay = d; renderHabits(); } }, 60000);
+    loadHabits();
+    showTab(currentTab);
+  }
+
+  async function toggleHabit(h) {
+    const day = todayInfo().iso;
+    const set = habitChecks.get(h.id) || new Set();
+    const was = set.has(day);
+    if (was) set.delete(day); else set.add(day);
+    habitChecks.set(h.id, set); renderHabits();
+    const { error } = was
+      ? await sb.from("habit_checks").delete().eq("habit_id", h.id).eq("day", day)
+      : await sb.from("habit_checks").insert({ habit_id: h.id, user_id: habitsUid, day });
+    if (error) { toast("Couldn't save that. Try again."); loadHabits(); return; }
+    if (!was) {
+      const n = streakOf(h.id);
+      toast(n > 1 ? "🔥 " + n + "-day streak: " + h.text : "Done for today: " + h.text, () => toggleHabit(h));
+    }
+  }
+  async function updateHabit(h, fields) {
+    Object.assign(h, fields); renderHabits();
+    const { error } = await sb.from("habits").update(fields).eq("id", h.id);
+    if (error) { toast("Couldn't save that. Try again."); loadHabits(); }
+  }
+  async function deleteHabit(h) {
+    habits = habits.filter(x => x.id !== h.id); renderHabits();
+    const { error } = await sb.from("habits").delete().eq("id", h.id);
+    if (error) { toast("Couldn't delete that."); loadHabits(); return; }
+    toast("Deleted “" + h.text + "”", async () => {
+      const { id, ...rest } = h;
+      await sb.from("habits").insert({ id, text: rest.text, tag: rest.tag, remind: rest.remind, remind_time: rest.remind_time, user_id: habitsUid });
+      const days = [...(habitChecks.get(id) || [])].map(day => ({ habit_id: id, user_id: habitsUid, day }));
+      if (days.length) await sb.from("habit_checks").insert(days);
+      loadHabits();
+    });
+  }
+  function editHabitText(h, el) {
+    habitEditing = true;
+    const inp = document.createElement("input"); inp.className = "habit-edit"; inp.value = h.text; inp.maxLength = 200;
+    el.replaceWith(inp); inp.focus(); inp.select();
+    let done = false;
+    const finish = (save) => {
+      if (done) return; done = true; habitEditing = false;
+      const v = inp.value.trim();
+      if (save && v && v !== h.text) updateHabit(h, { text: v }); else renderHabits();
+    };
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); finish(true); } if (e.key === "Escape") finish(false); });
+    inp.addEventListener("blur", () => finish(true));
+  }
+
+  function habitEl(h) {
+    const done = doneToday(h.id);
+    const li = document.createElement("li");
+    li.className = "item habit" + (done ? " done" : "");
+    const cb = document.createElement("input");
+    cb.type = "checkbox"; cb.className = "check"; cb.checked = done;
+    cb.setAttribute("aria-label", done ? "Mark not done today" : "Mark done today");
+    cb.addEventListener("change", () => toggleHabit(h));
+    const body = document.createElement("div"); body.className = "body";
+    const tx = document.createElement("div"); tx.className = "text"; tx.textContent = h.text;
+    const meta = document.createElement("div"); meta.className = "meta";
+    if (h.tag) { const tg = document.createElement("span"); tg.className = "chip tag"; tg.textContent = tagEmoji(h.tag) + " " + h.tag; meta.append(tg); }
+    // reminder time: tap to change (native picker on phones and computers)
+    const rc = document.createElement("label");
+    rc.className = "chip remind hchip" + (h.remind ? "" : " off");
+    rc.textContent = (h.remind ? "🔔 " : "🔕 ") + habitTimeLabel(h) + " ▾";
+    rc.title = "Change reminder time";
+    const rs = document.createElement("select"); rs.setAttribute("aria-label", "Reminder time");
+    fillHabitTimes(rs, !h.remind ? "off" : (h.remind_time || ""));
+    rs.addEventListener("change", () => {
+      const v = rs.value;
+      updateHabit(h, v === "off" ? { remind: false } : { remind: true, remind_time: v || null, last_notified: null });
+    });
+    rc.append(rs); meta.append(rc);
+    const n = streakOf(h.id);
+    if (n > 0) { const st = document.createElement("span"); st.className = "chip streak"; st.textContent = "🔥 " + n + (n === 1 ? " day" : " days"); meta.append(st); }
+    body.append(tx, meta);
+    const actions = document.createElement("div"); actions.className = "actions";
+    const ed = document.createElement("button"); ed.className = "icon"; ed.textContent = "✎"; ed.title = "Edit"; ed.setAttribute("aria-label", "Edit daily");
+    ed.addEventListener("click", () => editHabitText(h, tx));
+    const del = document.createElement("button"); del.className = "icon del"; del.textContent = "✕"; del.title = "Delete"; del.setAttribute("aria-label", "Delete daily");
+    del.addEventListener("click", () => deleteHabit(h));
+    actions.append(ed, del);
+    li.append(cb, body, actions);
+    // phones: tap anywhere on the daily to check it off (chips and buttons keep their own job)
+    li.addEventListener("click", (e) => {
+      if (!TOUCH) return;
+      if (e.target.closest("button, a, label, select, input, .chip, .actions")) return;
+      toggleHabit(h);
+    });
+    return li;
+  }
+
+  function renderHabits() {
+    const list = $("habitList");
+    if (!list) return;
+    const total = habits.length, doneN = habits.filter(h => doneToday(h.id)).length;
+    // not done first (by reminder time), then done
+    const tkey = (h) => h.remind ? (h.remind_time || notifyPrefs.notify_time || "08:00") : "99:99";
+    const sorted = [...habits].sort((a, b) => (doneToday(a.id) - doneToday(b.id)) || (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : a.created_at - b.created_at));
+    list.replaceChildren(...sorted.map(habitEl));
+    $("habitEmpty").hidden = !habitsLoaded || total > 0;
+    $("dailyProgress").hidden = total === 0;
+    $("dailyProgressText").textContent = doneN === total && total ? "🎉 All " + total + " dailies done today!" : doneN + " of " + total + " dailies done today";
+    $("dailyProgressFill").style.width = (total ? Math.round(100 * doneN / total) : 0) + "%";
+    const left = total - doneN;
+    $("dailyBadge").hidden = left === 0;
+    $("dailyBadge").textContent = left;
+  }
+
+  // add a daily
+  $("habitInput").addEventListener("input", () => { $("habitAdd").disabled = !$("habitInput").value.trim(); });
+  $("habitForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const raw = $("habitInput").value.trim();
+    if (!raw || !habitsUid) return;
+    let text = raw, tag = null;
+    try { const tg = pickTag(raw); tag = tg.tag; text = tidy(tg.text) || raw; } catch (er) {}
+    const tv = $("habitTime").value;
+    const row = { user_id: habitsUid, text, tag, remind: tv !== "off", remind_time: tv && tv !== "off" ? tv : null };
+    $("habitAdd").disabled = true;
+    const { data, error } = await sb.from("habits").insert(row).select().single();
+    if (error) { toast("Couldn't add that. Try again."); $("habitAdd").disabled = false; return; }
+    habits.push(data); $("habitInput").value = ""; renderHabits();
+    toast("Added to Dailies: " + text);
+  });
 
   // ---- Sign in / create account ----
   function initAuth() {

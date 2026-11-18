@@ -105,6 +105,43 @@ async function dueToday(userId: string, date: string) {
   return (data ?? []) as Task[];
 }
 
+// Dailies: at each daily's own time (or the person's daily reminder time), remind them
+// once per day if it isn't checked off yet.
+async function dailiesRun() {
+  const { data: hs } = await admin.from("habits")
+    .select("id, user_id, text, tag, remind_time, last_notified").eq("remind", true);
+  if (!hs?.length) return 0;
+  const userIds = [...new Set(hs.map((h) => h.user_id))];
+  const { data: prefs } = await admin.from("prefs").select("user_id, notify_time, tz").in("user_id", userIds);
+  const pref = new Map((prefs ?? []).map((p) => [p.user_id, p]));
+  const due = new Map<string, { h: typeof hs[number]; date: string }[]>();
+  for (const h of hs) {
+    const p = pref.get(h.user_id);
+    const now = localNow(p?.tz ?? "America/New_York");
+    const [hh, mm] = String(h.remind_time || p?.notify_time || "08:00").split(":").map(Number);
+    const target = hh * 60 + mm;
+    if (h.last_notified === now.date || now.minutes < target || now.minutes >= target + 60) continue;
+    if (!due.has(h.user_id)) due.set(h.user_id, []);
+    due.get(h.user_id)!.push({ h, date: now.date });
+  }
+  let sent = 0;
+  for (const [userId, items] of due) {
+    const ids = items.map((x) => x.h.id);
+    await admin.from("habits").update({ last_notified: items[0].date }).in("id", ids);
+    const { data: checks } = await admin.from("habit_checks").select("habit_id")
+      .in("habit_id", ids).eq("day", items[0].date);
+    const doneIds = new Set((checks ?? []).map((c) => c.habit_id));
+    const msgs = items.filter((x) => !doneIds.has(x.h.id)).map((x) => ({
+      title: `🔁 ${x.h.text}`,
+      body: ["Daily", x.h.tag ? `· ${x.h.tag}` : "", "· tap to check it off"].filter(Boolean).join(" "),
+      tag: `daily-${x.h.id}-${x.date}`,
+      url: "./",
+    }));
+    if (msgs.length) { await sendToUser(userId, msgs); sent += msgs.length; }
+  }
+  return sent;
+}
+
 async function dailyRun() {
   const { data: people } = await admin.from("prefs")
     .select("user_id, notify_time, tz, last_notified").eq("notify_enabled", true);
@@ -129,7 +166,9 @@ Deno.serve(async (req) => {
   try {
     const c = await config();
     if (req.headers.get("x-cron-secret") === c.cron_secret) {
-      return json({ ok: true, notified: await dailyRun() });
+      const notified = await dailyRun();
+      const dailies = await dailiesRun();
+      return json({ ok: true, notified, dailies });
     }
     const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     const { data: { user } } = await admin.auth.getUser(token);
