@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118141803">
-<meta name="app-version" content="0.0.33">
+<meta name="app-build" content="20261118152123">
+<meta name="app-version" content="0.0.34">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -467,6 +467,13 @@
   @media (prefers-color-scheme: dark) { .toast button { color: #2f6df6; } }
   /* ---- color themes ---- */
   @media (prefers-color-scheme: light) {
+    /* Pastel Rainbow: light */
+    :root[data-theme="butter"] { --bg: #fcf5e2; --card: #ffffff; --line: #e1d5b7; --accent: #FAEDCB; --accent-ink: #51431f; --date-bg: #FAEDCB; --date-ink: #6f5c2a; }
+    :root[data-theme="mint"] { --bg: #e1f0ed; --card: #ffffff; --line: #b5cdc8; --accent: #C9E4DE; --accent-ink: #1f5146; --date-bg: #C9E4DE; --date-ink: #2a6f60; }
+    :root[data-theme="sky"] { --bg: #e0edf7; --card: #ffffff; --line: #b2c8d9; --accent: #C6DEF1; --accent-ink: #1f3b51; --date-bg: #C6DEF1; --date-ink: #2a516f; }
+    :root[data-theme="lavender"] { --bg: #ebe4f7; --card: #ffffff; --line: #c5b9d8; --accent: #DBCDF0; --accent-ink: #331f51; --date-bg: #DBCDF0; --date-ink: #462a6f; }
+    :root[data-theme="blossom"] { --bg: #f8e0ed; --card: #ffffff; --line: #dab2c8; --accent: #F2C6DE; --accent-ink: #511f3a; --date-bg: #F2C6DE; --date-ink: #6f2a50; }
+    :root[data-theme="peach"] { --bg: #fbeadf; --card: #ffffff; --line: #dec3b0; --accent: #F7D9C4; --accent-ink: #51341f; --date-bg: #F7D9C4; --date-ink: #6f462a; }
     :root[data-theme="green"] { --bg: #f2faf4; --card: #ffffff; --line: #d7ecdd; --accent: #8fd3a8; --accent-ink: #11402a; --date-bg: #e3f5e9; --date-ink: #2e7a4f; }
     :root[data-theme="blue"] { --bg: #f2f7fd; --card: #ffffff; --line: #d6e4f5; --accent: #9cc3f0; --accent-ink: #0f2f57; --date-bg: #e3eefb; --date-ink: #2f5e99; }
     :root[data-theme="red"] { --bg: #fdf4f4; --card: #ffffff; --line: #f2dada; --accent: #f4a3a8; --accent-ink: #5a1a1f; --date-bg: #fbe4e5; --date-ink: #a1404a; }
@@ -476,6 +483,13 @@
     :root[data-theme="teal"] { --bg: #f1f9f8; --card: #ffffff; --line: #d4ebe8; --accent: #8fd5cb; --accent-ink: #0d3d37; --date-bg: #def4f1; --date-ink: #2a7a70; }
   }
   @media (prefers-color-scheme: dark) {
+    /* Pastel Rainbow: dark = Canvas-style slate with the pastel as accent */
+    :root[data-theme="butter"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #FAEDCB; --accent-ink: #1f2a2e; --date-bg: #656963; --date-ink: #FAEDCB; }
+    :root[data-theme="mint"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #C9E4DE; --accent-ink: #1f2a2e; --date-bg: #576769; --date-ink: #C9E4DE; }
+    :root[data-theme="sky"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #C6DEF1; --accent-ink: #1f2a2e; --date-bg: #56656e; --date-ink: #C6DEF1; }
+    :root[data-theme="lavender"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #DBCDF0; --accent-ink: #1f2a2e; --date-bg: #5c606e; --date-ink: #DBCDF0; }
+    :root[data-theme="blossom"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #F2C6DE; --accent-ink: #1f2a2e; --date-bg: #635e69; --date-ink: #F2C6DE; }
+    :root[data-theme="peach"] { --bg: #2B363B; --card: #334249; --line: #43535b; --ink: #e8eef0; --muted: #a3b3b8; --done: #7d8c91; --accent: #F7D9C4; --accent-ink: #1f2a2e; --date-bg: #646461; --date-ink: #F7D9C4; }
     :root[data-theme="green"] { --bg: #121a15; --card: #1a241d; --line: #2a3a2f; --accent: #9ad8b0; --accent-ink: #0e2a1a; --date-bg: #22382a; --date-ink: #b8ebc9; }
     :root[data-theme="blue"] { --bg: #11161f; --card: #18202c; --line: #28354a; --accent: #a9c9f2; --accent-ink: #0e2340; --date-bg: #213452; --date-ink: #c9dcf8; }
     :root[data-theme="red"] { --bg: #1b1314; --card: #251a1b; --line: #3d2a2c; --accent: #f2a7ab; --accent-ink: #3d1216; --date-bg: #45252a; --date-ink: #f8c9cc; }
@@ -1589,7 +1603,7 @@
     ["classic", "Auto (match my device)", "linear-gradient(135deg,#f6f5f1 50%,#141414 50%)"], ["light", "Light", "#f6f5f1"], ["dark", "Dark", "#141414"],
     ["green", "Green", "#8fd3a8"], ["blue", "Blue", "#9cc3f0"],
     ["red", "Red", "#f4a3a8"], ["purple", "Purple", "#c4b0f0"], ["pink", "Pink", "#f5afd0"],
-    ["orange", "Orange", "#f8c08e"], ["teal", "Teal", "#8fd5cb"], ["midnight", "Midnight (dark)", "#141822"]
+    ["orange", "Orange", "#f8c08e"], ["teal", "Teal", "#8fd5cb"], ["butter", "Butter", "#FAEDCB"], ["mint", "Mint", "#C9E4DE"], ["sky", "Sky", "#C6DEF1"], ["lavender", "Lavender", "#DBCDF0"], ["blossom", "Blossom", "#F2C6DE"], ["peach", "Peach", "#F7D9C4"], ["midnight", "Midnight (dark)", "#141822"]
   ];
   $("themeBtn").addEventListener("click", () => {
     sheet("Theme", THEMES.map(([id, name, color]) => {
