@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118034643">
+<meta name="app-build" content="20261118034936">
+<meta name="app-version" content="0.0.26">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -2593,8 +2594,8 @@
     $("menuRemember").checked = remembering();
     const th = THEMES.find(t => t[0] === (ui.theme || "classic"));
     $("menuThemeName").textContent = th ? th[1].replace(/ \(.*\)/, "") : "";
-    const meta = document.querySelector('meta[name="app-build"]');
-    $("menuVersion").textContent = "Version " + ((meta && meta.content !== "BUILD") ? meta.content.slice(0, 8).replace(/(\d{4})(\d{2})(\d{2})/, "$2/$3/$1") : "dev");
+    const ver = document.querySelector('meta[name="app-version"]');
+    $("menuVersion").textContent = "Version " + (ver ? ver.content : "dev");
     if (!signedIn) return;
     $("menuEmail").textContent = menuUser.email || "";
     $("linkMsg").textContent = "";
