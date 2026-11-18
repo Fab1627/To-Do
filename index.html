@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118152123">
-<meta name="app-version" content="0.0.34">
+<meta name="app-build" content="20261118163156">
+<meta name="app-version" content="0.0.35">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -426,6 +426,10 @@
   }
   body.touch .item { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: pointer; transition: transform .12s, box-shadow .12s; }
   body.touch .item.pressed { transform: scale(.97); box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+  .item.lifted { transform: scale(1.02); box-shadow: 0 10px 26px rgba(0,0,0,.22); }
+  .item.dragging { position: relative; z-index: 50; transition: none !important; box-shadow: 0 14px 32px rgba(0,0,0,.28); opacity: .96; cursor: grabbing; }
+  body.drag-on, body.drag-on * { -webkit-user-select: none !important; user-select: none !important; cursor: grabbing !important; }
+  body:not(.touch) .item[data-dgroup]:not(.done) { cursor: grab; }
   body.touch .chip select { display: none; }
   body.touch .chip { padding: 4px 10px; font-size: 13px; }
   .sheet-scrim { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 60; }
@@ -1083,6 +1087,7 @@
   }
 
   function render() {
+    if (dragActive || pressBusy) { renderPending = true; return; }
     const allOpen = tasks.filter(t => !t.done);
     renderFilters(allOpen);
     const open = tagFilter ? allOpen.filter(t => (t.tag || "") === tagFilter) : allOpen;
@@ -1153,7 +1158,7 @@
         h.addEventListener("click", toggle);
         h.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
         const ul = document.createElement("ul"); ul.className = "list";
-        ul.append(...map.get(k).sort(sorter).map(itemEl));
+        ul.append(...withManualOrder(map.get(k), sorter).map(t => { const li = itemEl(t); li.dataset.dgroup = "g"; return li; }));
         div.append(h, ul);
         return div;
       });
@@ -1305,7 +1310,9 @@
     actions.append(ed, del);
 
     li.append(cb, body, actions);
+    li.dataset.id = t.id;
     if (TOUCH) attachTouch(li, t);
+    else if (!t.done) holdDrag(li, null, reorderTasks);
     return li;
   }
 
@@ -1518,30 +1525,183 @@
     toast("Completed “" + t.text + "”", () => setDone(t, false));
   }
 
-  // ---- tap = complete · hold = menu · tap a chip = that chip's menu ----
-  function attachTouch(li, t) {
-    let timer = null, sx = 0, sy = 0, longFired = false;
+  // ================= drag to reorder =================
+  // phones: hold a task, then move your finger to drag it (hold without moving = menu)
+  // computers: click and drag a task up or down
+  let dragActive = false, renderPending = false, habitRenderPending = false, holdArmed = false, pressBusy = false;
+  // a sync that arrives while a finger is down waits until it's lifted
+  function setPressBusy(v) {
+    pressBusy = v;
+    if (v || dragActive) return;
+    if (renderPending) { renderPending = false; render(); }
+    if (habitRenderPending) { habitRenderPending = false; renderHabits(); }
+  }
+  document.addEventListener("touchmove", (e) => { if (holdArmed || dragActive) e.preventDefault(); }, { passive: false });
+
+  // the order you set by dragging wins; a new task keeps its default spot relative to
+  // the rest (a High one lands on top, a Medium/Low one at the bottom of the day)
+  function withManualOrder(items, sorter) {
+    const arr = items.slice().sort(sorter);
+    const vk = new Map();
+    let prev = -Infinity;
+    arr.forEach((t, i) => { if (t.position != null) { prev = Math.max(prev, t.position); vk.set(t, [t.position, i]); } else vk.set(t, [prev, i]); });
+    return arr.sort((a, b) => {
+      const A = vk.get(a), B = vk.get(b);
+      if (A[0] !== B[0]) return A[0] < B[0] ? -1 : 1;
+      return A[1] - B[1];
+    });
+  }
+  // new positions after a drop: just the moved one if there's room, otherwise renumber the group
+  function newPositions(items, movedId) {
+    const out = new Map();
+    const i = items.findIndex(x => x.id === movedId);
+    const prev = items[i - 1], next = items[i + 1];
+    const others = items.filter(x => x.id !== movedId);
+    if (others.length && others.every(x => x.position != null)) {
+      let pos = null;
+      if (prev && next) { if (next.position - prev.position > 1e-6) pos = (prev.position + next.position) / 2; }
+      else if (prev) pos = prev.position + 1000;
+      else if (next) pos = next.position - 1000;
+      if (pos != null) {
+        const ok = (!prev || prev.position < pos) && (!next || pos < next.position);
+        if (ok) { out.set(movedId, pos); return out; }
+      }
+    }
+    items.forEach((x, k) => { const pos = (k + 1) * 1000; if (x.position !== pos) out.set(x.id, pos); });
+    return out;
+  }
+  function reorderTasks(ids, movedId) {
+    const items = ids.map(id => tasks.find(x => x.id === id)).filter(Boolean);
+    const np = newPositions(items, movedId);
+    for (const [id, pos] of np) { const t = tasks.find(x => x.id === id); if (t) patch(t, { position: pos }); }
+  }
+  function reorderHabits(ids, movedId) {
+    const items = ids.map(id => habits.find(x => x.id === id)).filter(Boolean);
+    const np = newPositions(items, movedId);
+    for (const [id, pos] of np) { const h = habits.find(x => x.id === id); if (h) { h.position = pos; updateHabit(h, { position: pos }); } }
+    renderHabits();
+  }
+  function swallowNextClick() {
+    const stop = (e) => { e.preventDefault(); e.stopPropagation(); };
+    document.addEventListener("click", stop, { capture: true, once: true });
+    setTimeout(() => document.removeEventListener("click", stop, true), 400);
+  }
+
+  // onHold: phones, held still (null = no menu) · onDrop(ids, movedId): after a drag (null = no dragging here)
+  function holdDrag(li, onHold, onDrop) {
+    let timer = null, sx = 0, sy = 0, armed = false, mouse = false, pid = null;
     const cancel = () => { if (timer) { clearTimeout(timer); timer = null; } li.classList.remove("pressed"); };
+    const disarm = () => { armed = false; holdArmed = false; li.classList.remove("lifted"); };
+    const release = () => { cancel(); disarm(); if (pressBusy) setPressBusy(false); };
     li.addEventListener("pointerdown", (e) => {
-      if (e.pointerType === "mouse") return;
+      if (dragActive) return;
+      mouse = e.pointerType === "mouse";
+      if (mouse) {
+        if (e.button !== 0 || !onDrop || !li.dataset.dgroup) return;
+        if (e.target.closest("input, select, textarea, button, a, label, .chip, .picker, [contenteditable=true]")) return;
+        sx = e.clientX; sy = e.clientY; pid = e.pointerId; armed = true;
+        return;
+      }
       if (e.target.closest("input, select, textarea, [contenteditable=true], .picker")) return;
-      longFired = false; sx = e.clientX; sy = e.clientY;
+      sx = e.clientX; sy = e.clientY; pid = e.pointerId;
+      setPressBusy(true);
       li.classList.add("pressed");
       timer = setTimeout(() => {
-        timer = null; longFired = true;
+        timer = null; armed = true; holdArmed = true;
         try { navigator.vibrate && navigator.vibrate(15); } catch (er) {}
-        li.classList.remove("pressed");
-        openTaskMenu(t, li);
+        li.classList.remove("pressed"); li.classList.add("lifted");
       }, 450);
     });
     li.addEventListener("pointermove", (e) => {
-      if (timer && (Math.abs(e.clientX - sx) > 10 || Math.abs(e.clientY - sy) > 10)) cancel();
+      if (e.pointerId !== pid) return;
+      const moved = Math.max(Math.abs(e.clientX - sx), Math.abs(e.clientY - sy));
+      if (timer && moved > 10) { release(); return; }
+      if (armed && moved > (mouse ? 5 : 6)) {
+        disarm(); pressBusy = false;
+        if (!onDrop || !li.dataset.dgroup) {
+          setPressBusy(false);
+          if (!mouse) {
+            swallowNextClick();
+            if (onDrop) toast("Switch Sort to Default or Date to rearrange");
+            else if (onHold) onHold();
+          }
+          return;
+        }
+        startDrag(li, e, onDrop);
+      }
     });
-    for (const ev of ["pointerup", "pointercancel", "pointerleave"]) li.addEventListener(ev, cancel);
+    const up = (e) => {
+      if (e.pointerId !== pid) return;
+      const wasArmed = armed;
+      release();
+      if (wasArmed && !mouse && e.type === "pointerup") { swallowNextClick(); if (onHold) onHold(); }
+    };
+    li.addEventListener("pointerup", up);
+    li.addEventListener("pointercancel", up);
+    li.addEventListener("pointerleave", (e) => { if (timer) release(); if (mouse && armed && e.buttons === 0) disarm(); });
+  }
+
+  function startDrag(li, e0, onDrop) {
+    const ul = li.parentElement, group = li.dataset.dgroup;
+    if (!ul) return;
+    dragActive = true;
+    try { getSelection().removeAllRanges(); } catch (er) {}
+    const pid = e0.pointerId;
+    const r0 = li.getBoundingClientRect();
+    const grab = e0.clientY - r0.top, h = r0.height;
+    let shift = 0, lastY = e0.clientY, raf = 0;
+    li.classList.add("dragging"); document.body.classList.add("drag-on");
+    const peers = () => [...ul.children].filter(n => n !== li && n.dataset && n.dataset.dgroup === group);
+    const layout = () => {
+      const center = lastY - grab + h / 2;
+      const ps = peers();
+      let before = null;
+      for (const n of ps) { const r = n.getBoundingClientRect(); if (center < r.top + r.height / 2) { before = n; break; } }
+      if (before) { if (li.nextElementSibling !== before) ul.insertBefore(li, before); }
+      else if (ps.length) { const last = ps[ps.length - 1]; if (last.nextElementSibling !== li) last.after(li); }
+      const natural = li.getBoundingClientRect().top - shift;
+      shift = lastY - grab - natural;
+      li.style.transform = "translateY(" + shift + "px)";
+    };
+    const tick = () => {
+      const edge = 70, H = innerHeight;
+      let v = 0;
+      if (lastY < edge) v = -Math.ceil((edge - lastY) / 5);
+      else if (lastY > H - edge) v = Math.ceil((lastY - (H - edge)) / 5);
+      if (v) { scrollBy(0, v); layout(); }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    const move = (e) => { if (e.pointerId !== pid) return; lastY = e.clientY; layout(); e.preventDefault(); };
+    const end = (e) => {
+      if (e.pointerId !== pid) return;
+      cancelAnimationFrame(raf);
+      removeEventListener("pointermove", move, true);
+      removeEventListener("pointerup", end, true);
+      removeEventListener("pointercancel", end, true);
+      li.classList.remove("dragging"); document.body.classList.remove("drag-on");
+      li.style.transform = "";
+      swallowNextClick();
+      dragActive = false;
+      const ids = [...ul.children].filter(n => n.dataset && n.dataset.dgroup === group).map(n => n.dataset.id);
+      const changed = ids.join() !== order0;
+      if (changed) onDrop(ids, li.dataset.id);
+      if (renderPending) { renderPending = false; render(); }
+      if (habitRenderPending) { habitRenderPending = false; renderHabits(); }
+    };
+    const order0 = [...ul.children].filter(n => n.dataset && n.dataset.dgroup === group).map(n => n.dataset.id).join();
+    addEventListener("pointermove", move, true);
+    addEventListener("pointerup", end, true);
+    addEventListener("pointercancel", end, true);
+    layout();
+  }
+
+  // ---- tap = complete · hold = menu · tap a chip = that chip's menu ----
+  function attachTouch(li, t) {
+    holdDrag(li, () => openTaskMenu(t, li), t.done ? null : reorderTasks);
     li.addEventListener("contextmenu", (e) => e.preventDefault());
     // Capture phase: runs before the chip/button inside the row sees the tap.
     li.addEventListener("click", (e) => {
-      if (longFired) { e.preventDefault(); e.stopPropagation(); longFired = false; return; }
       const chip = e.target.closest(".chip");
       if (!chip || !li.contains(chip)) return;
       e.preventDefault(); e.stopPropagation();
@@ -1697,6 +1857,7 @@
 
   async function patch(t, fields) {
     if (!col) return;
+    if ("due" in fields && (fields.due || null) !== (t.due || null) && t.position != null) fields = { ...fields, position: null };
     try { await col.doc(t.id).update(fields); }
     catch (e) { setStatus("Couldn't update that task.", true); }
   }
@@ -2183,7 +2344,7 @@
   const FIELD = {
     text: "text", due: "due", time: "time", at: "at", priority: "priority", tag: "tag",
     kind: "kind", eventId: "event_id", done: "done", doneAt: "done_at",
-    autoDoneOff: "auto_done_off", createdAt: "created_at"
+    autoDoneOff: "auto_done_off", createdAt: "created_at", position: "position"
   };
   const COLUMN = Object.fromEntries(Object.entries(FIELD).map(([k, v]) => [v, k]));
   const toRow = (obj) => {
@@ -2674,6 +2835,7 @@
     const done = doneToday(h.id);
     const li = document.createElement("li");
     li.className = "item habit" + (done ? " done" : "");
+    li.dataset.id = h.id;
     const cb = document.createElement("input");
     cb.type = "checkbox"; cb.className = "check"; cb.checked = done;
     cb.setAttribute("aria-label", done ? "Mark not done today" : "Mark done today");
@@ -2710,6 +2872,8 @@
     del.addEventListener("click", () => deleteHabit(h));
     actions.append(ed, del);
     li.append(cb, body, actions);
+    // hold/click and drag to reorder (computers and phones)
+    holdDrag(li, null, reorderHabits);
     // phones: tap anywhere on the daily to check it off (chips and buttons keep their own job)
     li.addEventListener("click", (e) => {
       if (!TOUCH) return;
@@ -2722,6 +2886,7 @@
   let notTodayOpen = false;
   try { notTodayOpen = localStorage.getItem("todo.notToday") === "1"; } catch (e) {}
   function renderHabits() {
+    if (dragActive || pressBusy) { habitRenderPending = true; return; }
     const list = $("habitList");
     if (!list) return;
     const todayIso = todayInfo().iso;
@@ -2730,15 +2895,16 @@
     const total = todays.length, doneN = todays.filter(h => doneToday(h.id)).length;
     // not done first (by reminder time), then done
     const tkey = (h) => h.remind ? (h.remind_time || dailiesDefault()) : "99:99";
-    const sorted = [...todays].sort((a, b) => (doneToday(a.id) - doneToday(b.id)) || (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : a.created_at - b.created_at));
-    const nodes = sorted.map(habitEl);
+    const byTime = (a, b) => (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : (a.created_at < b.created_at ? -1 : a.created_at > b.created_at ? 1 : 0));
+    const mk = (list, g) => withManualOrder(list, byTime).map(h => { const li = habitEl(h); li.dataset.dgroup = g; return li; });
+    const nodes = [...mk(todays.filter(h => !doneToday(h.id)), "open"), ...mk(todays.filter(h => doneToday(h.id)), "done")];
     if (others.length) {
       const head = document.createElement("li"); head.className = "notday-head" + (notTodayOpen ? "" : " collapsed");
       head.innerHTML = '<span class="chev">▾</span><span></span>';
       head.lastChild.textContent = "😌 Not today · " + others.length + (notTodayOpen ? "" : " (they'll show up on their day)");
       head.addEventListener("click", () => { notTodayOpen = !notTodayOpen; try { localStorage.setItem("todo.notToday", notTodayOpen ? "1" : "0"); } catch (e) {} renderHabits(); });
       nodes.push(head);
-      if (notTodayOpen) nodes.push(...others.map(habitEl));
+      if (notTodayOpen) nodes.push(...mk(others, "other"));
     }
     list.replaceChildren(...nodes);
     $("habitEmpty").hidden = !habitsLoaded || habits.length > 0;
@@ -2861,6 +3027,7 @@
       "➕ <b>Add a task</b>: type it or tap 🎙️ and say it. Words like “urgent”, “Friday” or “a week from today” set the importance and date for you.",
       "✅ <b>Finish a task</b>: tap it (phone) or tick the circle. Tap <i>Undo</i> if it was a mistake.",
       "✋ <b>Change a task</b>: press and hold it (phone), or tap its importance, 📅 date or 🏷️ tag.",
+      "↕️ <b>Rearrange</b>: hold a task or daily and drag it up or down (phone), or click and drag it (computer). Works within a day when Sort is Default or Date.",
       "🔁 <b>Dailies</b>: things to do every day. They reset at midnight and keep a 🔥 streak.",
       "🔔 <b>Reminders</b>: tap the bell to turn on notifications and pick your daily time.",
       "🎨 <b>Themes</b>: tap the palette to change colors.",
