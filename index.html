@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118035723">
-<meta name="app-version" content="0.0.30">
+<meta name="app-build" content="20261118140438">
+<meta name="app-version" content="0.0.31">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -1054,6 +1054,18 @@
     el.replaceChildren(mk("All", openTasks.length, null), ...tags.map(t => mk(tagEmoji(t) + " " + t, counts.get(t), t)));
   }
 
+  // Header: everything still left for today = to-do tasks due today (or overdue) + today's dailies not done.
+  let tasksLeftToday = 0, dailiesLeftToday = 0;
+  function updateTodayCount() {
+    if (!loaded) { countEl.textContent = ""; return; }
+    const total = tasksLeftToday + dailiesLeftToday;
+    if (!total) { countEl.textContent = "Nothing left today 🎉"; return; }
+    const parts = [];
+    if (tasksLeftToday) parts.push(tasksLeftToday + (tasksLeftToday === 1 ? " to-do" : " to-dos"));
+    if (dailiesLeftToday) parts.push(dailiesLeftToday + (dailiesLeftToday === 1 ? " daily" : " dailies"));
+    countEl.textContent = total + " left today" + (parts.length > 1 ? " · " + parts.join(" + ") : "");
+  }
+
   function render() {
     const allOpen = tasks.filter(t => !t.done);
     renderFilters(allOpen);
@@ -1176,8 +1188,8 @@
 
     emptyEl.hidden = !loaded || open.length > 0;
     // Header: how many tasks are still left for today (due today or overdue, not checked off).
-    const leftToday = allOpen.filter(t => t.due && dayDiff(t.due) <= 0).length;
-    countEl.textContent = loaded ? (leftToday ? leftToday + " left today" : "Nothing left today 🎉") : "";
+    tasksLeftToday = allOpen.filter(t => t.due && dayDiff(t.due) <= 0).length;
+    updateTodayCount();
     doneHead.hidden = done.length === 0;
     doneEl.hidden = !showDone || done.length === 0;
     toggleDone.textContent = (showDone ? "Hide" : "Show") + " completed (" + done.length + ")";
@@ -2718,6 +2730,7 @@
     $("dailyProgressText").textContent = doneN === total && total ? "🎉 All " + total + " of today's dailies done!" : doneN + " of " + total + " dailies done today";
     $("dailyProgressFill").style.width = (total ? Math.round(100 * doneN / total) : 0) + "%";
     const left = total - doneN;   // only dailies scheduled for today
+    dailiesLeftToday = left; updateTodayCount();
     $("dailyBadge").hidden = left === 0;
     $("dailyBadge").textContent = left;
   }
