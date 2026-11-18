@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118140438">
-<meta name="app-version" content="0.0.31">
+<meta name="app-build" content="20261118141200">
+<meta name="app-version" content="0.0.32">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -529,7 +529,7 @@
   }
   .tabs button.on { background: var(--accent); color: var(--accent-ink); }
   .tab-badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--hi); color: #fff; font-size: 12px; display: inline-grid; place-items: center; }
-  .tabs button.on .tab-badge { background: var(--accent-ink); color: var(--accent); }
+  .tabs button.on .tab-badge { box-shadow: 0 0 0 2px var(--accent-ink); }
   /* ---- dailies ---- */
   .daily-progress { margin: 16px 2px 6px; }
   .dp-text { font-size: 14px; color: var(--muted); margin-bottom: 6px; }
@@ -631,7 +631,7 @@
   </form>
   <div id="app" hidden>
   <nav class="tabs" role="tablist" aria-label="Sections">
-    <button type="button" role="tab" data-tab="tasks" class="on" aria-selected="true">📋 To-Do</button>
+    <button type="button" role="tab" data-tab="tasks" class="on" aria-selected="true">📋 To-Do <span class="tab-badge" id="todoBadge" hidden></span></button>
     <button type="button" role="tab" data-tab="dailies" aria-selected="false">🔁 Dailies <span class="tab-badge" id="dailyBadge" hidden></span></button>
   </nav>
   <div id="tasksTab">
@@ -1057,6 +1057,9 @@
   // Header: everything still left for today = to-do tasks due today (or overdue) + today's dailies not done.
   let tasksLeftToday = 0, dailiesLeftToday = 0;
   function updateTodayCount() {
+    // red count on the To-Do tab: to-dos due today (and overdue) not checked off
+    const tb = $("todoBadge");
+    if (tb) { tb.hidden = !loaded || tasksLeftToday === 0; tb.textContent = tasksLeftToday; }
     if (!loaded) { countEl.textContent = ""; return; }
     const total = tasksLeftToday + dailiesLeftToday;
     if (!total) { countEl.textContent = "Nothing left today 🎉"; return; }
