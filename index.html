@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118035505">
-<meta name="app-version" content="0.0.29">
+<meta name="app-build" content="20261118035723">
+<meta name="app-version" content="0.0.30">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -541,6 +541,7 @@
   .chip.streak { background: transparent; border: 1px solid var(--line); color: var(--ink); }
   .hchip { position: relative; cursor: pointer; }
   .hchip select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; font-size: 16px; }
+  body.touch .hchip select { display: block; }   /* phones: keep the dailies time picker tappable */
   .chip.remind { background: var(--date-bg); color: var(--date-ink); }
   .chip.remind.off { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
   .due-group { display: inline-flex; align-items: center; gap: 8px; }
@@ -791,7 +792,7 @@
   </section>
 
   <section class="dsec">
-    <h3>Daily reminder</h3>
+    <h3>📋 To-Do reminder</h3>
     <label class="switch-row">
       <span>Notify me about tasks due that day</span>
       <input type="checkbox" id="dailyOn" class="switch">
@@ -801,6 +802,22 @@
       <select id="dailyTime" aria-label="Daily reminder time"></select>
     </label>
     <p class="dnote">You get one notification for each task due that day, most important first. Nothing is sent on days with no tasks.</p>
+  </section>
+
+  <section class="dsec">
+    <h3>🔁 Dailies reminder</h3>
+    <label class="switch-row">
+      <span>Remind me about dailies I haven't done</span>
+      <input type="checkbox" id="dailiesOn" class="switch">
+    </label>
+    <label class="time-row">
+      <span>Every day at</span>
+      <select id="dailiesTime" aria-label="Dailies reminder time"></select>
+    </label>
+    <p class="dnote">Used for any daily that doesn't have its own time. Only dailies scheduled for that day and not checked off yet are sent.</p>
+  </section>
+
+  <section class="dsec">
     <div class="drow">
       <button type="button" class="ghost" id="testBtn">Send a test now</button>
     </div>
@@ -2215,7 +2232,7 @@
         await sb.from("prefs").upsert({ user_id: userId, collapsed: d.collapsed || [] });
       },
       onSnapshot(next) {
-        sb.from("prefs").select("collapsed, notify_enabled, notify_time, tz, ui").maybeSingle().then(({ data }) => {
+        sb.from("prefs").select("collapsed, notify_enabled, notify_time, tz, ui, dailies_enabled, dailies_time").maybeSingle().then(({ data }) => {
           next({ exists: !!data, data: () => (data ? { ...data } : undefined) });
         });
         return () => {};
@@ -2229,7 +2246,8 @@
   const isStandalone = !!(window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
   const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
   let notifyUid = null;
-  let notifyPrefs = { notify_enabled: false, notify_time: "08:00" };
+  let notifyPrefs = { notify_enabled: false, notify_time: "08:00", dailies_enabled: true, dailies_time: "08:00" };
+  const dailiesDefault = () => notifyPrefs.dailies_time || notifyPrefs.notify_time || "08:00";
 
   function b64ToBytes(b64) {
     const pad = "=".repeat((4 - b64.length % 4) % 4);
@@ -2237,16 +2255,18 @@
     return Uint8Array.from(raw, c => c.charCodeAt(0));
   }
   function fillTimes() {
-    const sel = $("dailyTime");
-    if (sel.options.length) return;
-    for (let h = 5; h <= 23; h++) for (const m of [0, 15, 30, 45]) {
-      const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
-      const o = document.createElement("option"); o.value = v; o.textContent = to12(v); sel.append(o);
+    for (const sel of [$("dailyTime"), $("dailiesTime")]) {
+      if (sel.options.length) continue;
+      for (let h = 5; h <= 23; h++) for (const m of [0, 15, 30, 45]) {
+        const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0");
+        const o = document.createElement("option"); o.value = v; o.textContent = to12(v); sel.append(o);
+      }
     }
   }
   function loadNotifyPrefs(p) {
     if (!p) return;
-    notifyPrefs = { notify_enabled: !!p.notify_enabled, notify_time: p.notify_time || "08:00" };
+    notifyPrefs = { notify_enabled: !!p.notify_enabled, notify_time: p.notify_time || "08:00",
+      dailies_enabled: p.dailies_enabled !== false, dailies_time: p.dailies_time || p.notify_time || "08:00" };
     fillTimes();
     $("dailyOn").checked = notifyPrefs.notify_enabled;
     if (![...$("dailyTime").options].some(o => o.value === notifyPrefs.notify_time)) {
@@ -2254,6 +2274,12 @@
     }
     $("dailyTime").value = notifyPrefs.notify_time;
     $("dailyTime").closest(".time-row").classList.toggle("off", !notifyPrefs.notify_enabled);
+    $("dailiesOn").checked = notifyPrefs.dailies_enabled;
+    if (![...$("dailiesTime").options].some(o => o.value === notifyPrefs.dailies_time)) {
+      const o = document.createElement("option"); o.value = notifyPrefs.dailies_time; o.textContent = to12(notifyPrefs.dailies_time); $("dailiesTime").append(o);
+    }
+    $("dailiesTime").value = notifyPrefs.dailies_time;
+    $("dailiesTime").closest(".time-row").classList.toggle("off", !notifyPrefs.dailies_enabled);
     if (typeof renderHabits === "function" && habitsUid) { fillHabitTimes($("habitTime"), $("habitTime").value); renderHabits(); }
   }
   async function saveNotifyPrefs(fields) {
@@ -2263,7 +2289,9 @@
     const { error } = await sb.from("prefs").upsert({ user_id: notifyUid, ...fields, tz });
     const msg = $("notifyMsg");
     if (error) { msg.textContent = "Couldn't save. Try again."; msg.className = "dnote warn"; return false; }
-    msg.textContent = notifyPrefs.notify_enabled ? "Saved ✓ Daily reminder at " + to12(notifyPrefs.notify_time) + "." : "Saved ✓ Daily reminder is off.";
+    msg.textContent = ("dailies_time" in fields || "dailies_enabled" in fields)
+      ? (notifyPrefs.dailies_enabled ? "Saved ✓ Dailies reminder at " + to12(notifyPrefs.dailies_time) + "." : "Saved ✓ Dailies reminders are off.")
+      : (notifyPrefs.notify_enabled ? "Saved ✓ To-Do reminder at " + to12(notifyPrefs.notify_time) + "." : "Saved ✓ To-Do reminder is off.");
     msg.className = "dnote ok";
     return true;
   }
@@ -2336,6 +2364,8 @@
     $("devOff").addEventListener("click", turnOffDevice);
     $("dailyOn").addEventListener("change", () => saveNotifyPrefs({ notify_enabled: $("dailyOn").checked, notify_time: $("dailyTime").value }));
     $("dailyTime").addEventListener("change", () => saveNotifyPrefs({ notify_enabled: $("dailyOn").checked, notify_time: $("dailyTime").value }));
+    $("dailiesOn").addEventListener("change", () => saveNotifyPrefs({ dailies_enabled: $("dailiesOn").checked, dailies_time: $("dailiesTime").value }));
+    $("dailiesTime").addEventListener("change", () => saveNotifyPrefs({ dailies_enabled: $("dailiesOn").checked, dailies_time: $("dailiesTime").value }));
     $("testBtn").addEventListener("click", async () => {
       const msg = $("notifyMsg"), btn = $("testBtn");
       btn.disabled = true; msg.className = "dnote"; msg.textContent = "Sending…";
@@ -2503,11 +2533,11 @@
     ]);
   }
 
-  const habitTimeLabel = (h) => !h.remind ? "No reminder" : to12(h.remind_time || notifyPrefs.notify_time || "08:00");
+  const habitTimeLabel = (h) => !h.remind ? "No reminder" : to12(h.remind_time || dailiesDefault());
   function fillHabitTimes(sel, current) {
     sel.replaceChildren();
     const add = (v, label) => { const o = document.createElement("option"); o.value = v; o.textContent = label; sel.append(o); };
-    add("", "My daily reminder time (" + to12(notifyPrefs.notify_time || "08:00") + ")");
+    add("", "My dailies reminder time (" + to12(dailiesDefault()) + ")");
     for (let h = 5; h <= 23; h++) for (const m of [0, 15, 30, 45]) {
       const v = String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0"); add(v, to12(v));
     }
@@ -2671,7 +2701,7 @@
     const others = habits.filter(h => !scheduledOn(h, todayIso));
     const total = todays.length, doneN = todays.filter(h => doneToday(h.id)).length;
     // not done first (by reminder time), then done
-    const tkey = (h) => h.remind ? (h.remind_time || notifyPrefs.notify_time || "08:00") : "99:99";
+    const tkey = (h) => h.remind ? (h.remind_time || dailiesDefault()) : "99:99";
     const sorted = [...todays].sort((a, b) => (doneToday(a.id) - doneToday(b.id)) || (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : a.created_at - b.created_at));
     const nodes = sorted.map(habitEl);
     if (others.length) {

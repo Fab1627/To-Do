@@ -130,13 +130,14 @@ async function dailiesRun() {
     .select("id, user_id, text, tag, remind_time, last_notified, schedule, days, start_date").eq("remind", true);
   if (!hs?.length) return 0;
   const userIds = [...new Set(hs.map((h) => h.user_id))];
-  const { data: prefs } = await admin.from("prefs").select("user_id, notify_time, tz").in("user_id", userIds);
+  const { data: prefs } = await admin.from("prefs").select("user_id, notify_time, tz, dailies_enabled, dailies_time").in("user_id", userIds);
   const pref = new Map((prefs ?? []).map((p) => [p.user_id, p]));
   const due = new Map<string, { h: typeof hs[number]; date: string }[]>();
   for (const h of hs) {
     const p = pref.get(h.user_id);
+    if (p && p.dailies_enabled === false) continue;   // dailies reminders turned off
     const now = localNow(p?.tz ?? "America/New_York");
-    const [hh, mm] = String(h.remind_time || p?.notify_time || "08:00").split(":").map(Number);
+    const [hh, mm] = String(h.remind_time || p?.dailies_time || p?.notify_time || "08:00").split(":").map(Number);
     const target = hh * 60 + mm;
     if (h.last_notified === now.date || now.minutes < target || now.minutes >= target + 60) continue;
     if (!scheduledOn(h, now.date)) continue;     // not one of its days
