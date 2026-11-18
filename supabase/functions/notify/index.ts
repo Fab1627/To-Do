@@ -105,11 +105,29 @@ async function dueToday(userId: string, date: string) {
   return (data ?? []) as Task[];
 }
 
+// Is this daily on today's schedule? (weekdays / weekends / every other day / custom days)
+type Sched = { schedule?: string | null; days?: number[] | null; start_date?: string | null };
+function scheduledOn(h: Sched, date: string) {
+  const [y, m, d] = date.split("-").map(Number);
+  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  switch (h.schedule ?? "daily") {
+    case "weekdays": return dow >= 1 && dow <= 5;
+    case "weekends": return dow === 0 || dow === 6;
+    case "custom": return h.days?.length ? h.days.includes(dow) : true;
+    case "alternate": {
+      const [sy, sm, sd] = String(h.start_date ?? date).split("-").map(Number);
+      const diff = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(sy, sm - 1, sd)) / 86400000);
+      return ((diff % 2) + 2) % 2 === 0;
+    }
+    default: return true;
+  }
+}
+
 // Dailies: at each daily's own time (or the person's daily reminder time), remind them
 // once per day if it isn't checked off yet.
 async function dailiesRun() {
   const { data: hs } = await admin.from("habits")
-    .select("id, user_id, text, tag, remind_time, last_notified").eq("remind", true);
+    .select("id, user_id, text, tag, remind_time, last_notified, schedule, days, start_date").eq("remind", true);
   if (!hs?.length) return 0;
   const userIds = [...new Set(hs.map((h) => h.user_id))];
   const { data: prefs } = await admin.from("prefs").select("user_id, notify_time, tz").in("user_id", userIds);
@@ -121,6 +139,7 @@ async function dailiesRun() {
     const [hh, mm] = String(h.remind_time || p?.notify_time || "08:00").split(":").map(Number);
     const target = hh * 60 + mm;
     if (h.last_notified === now.date || now.minutes < target || now.minutes >= target + 60) continue;
+    if (!scheduledOn(h, now.date)) continue;     // not one of its days
     if (!due.has(h.user_id)) due.set(h.user_id, []);
     due.get(h.user_id)!.push({ h, date: now.date });
   }

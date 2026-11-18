@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118034936">
-<meta name="app-version" content="0.0.26">
+<meta name="app-build" content="20261118035256">
+<meta name="app-version" content="0.0.27">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -543,6 +543,20 @@
   .hchip select { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; font-size: 16px; }
   .chip.remind { background: var(--date-bg); color: var(--date-ink); }
   .chip.remind.off { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+  .day-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .day-picker button {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: transparent;
+    color: var(--muted); font: inherit; font-weight: 600; cursor: pointer;
+  }
+  .day-picker button.on { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .sheet .day-picker { justify-content: center; padding: 10px 0 4px; }
+  .chip.repeat { background: transparent; border: 1px solid var(--line); color: var(--ink); cursor: pointer; }
+  .notday-head { display: flex; align-items: center; gap: 8px; margin: 22px 4px 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; cursor: pointer; user-select: none; }
+  .notday-head::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .notday-head .chev { transition: transform .15s; }
+  .notday-head.collapsed .chev { transform: rotate(-90deg); }
+  .item.habit.notday { opacity: .5; filter: saturate(.6); }
+  .notday-head { text-transform: none !important; letter-spacing: 0 !important; font-weight: 600 !important; font-size: 14px !important; }
   .habit-edit { flex: 1; min-width: 0; font: inherit; font-size: 16px; border: 1px solid var(--accent); border-radius: 8px; padding: 2px 6px; background: transparent; color: var(--ink); }
   .hint { margin-top: 34px; font-size: 13px; color: var(--muted); text-align: center; }
 </style>
@@ -678,9 +692,19 @@
         <button type="submit" class="add" id="habitAdd" disabled>Add</button>
       </div>
       <div class="row2">
+        <span class="lbl">🔁 Repeat</span>
+        <select id="habitRepeat" class="date-in" aria-label="Repeat">
+          <option value="daily">Every day</option>
+          <option value="weekdays">Weekdays (Mon–Fri)</option>
+          <option value="weekends">Weekends (Sat–Sun)</option>
+          <option value="alternate">Every other day</option>
+          <option value="custom">Custom days…</option>
+        </select>
+        <span class="spacer"></span>
         <span class="lbl">🔔 Remind me at</span>
         <select id="habitTime" class="date-in" aria-label="Reminder time"></select>
       </div>
+      <div class="day-picker" id="habitDays" hidden></div>
     </form>
     <div class="daily-progress" id="dailyProgress" hidden>
       <div class="dp-text" id="dailyProgressText"></div>
@@ -2394,6 +2418,82 @@
   }
   for (const b of document.querySelectorAll(".tabs button")) b.addEventListener("click", () => showTab(b.dataset.tab));
 
+  // ---- which days a daily happens on ----
+  const DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const DOW_LETTER = ["S", "M", "T", "W", "T", "F", "S"];
+  const isoToDate = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+  function scheduledOn(h, iso) {
+    const dow = isoToDate(iso).getDay();
+    switch (h.schedule || "daily") {
+      case "weekdays": return dow >= 1 && dow <= 5;
+      case "weekends": return dow === 0 || dow === 6;
+      case "custom": return Array.isArray(h.days) && h.days.length ? h.days.includes(dow) : true;
+      case "alternate": {
+        const start = isoToDate(h.start_date || iso);
+        const diff = Math.round((isoToDate(iso) - start) / 86400000);
+        return ((diff % 2) + 2) % 2 === 0;
+      }
+      default: return true;
+    }
+  }
+  function repeatLabel(h) {
+    switch (h.schedule || "daily") {
+      case "weekdays": return "Weekdays";
+      case "weekends": return "Weekends";
+      case "alternate": return "Every other day";
+      case "custom": {
+        const d = (h.days || []).slice().sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+        return d.length === 7 ? "Every day" : d.length ? d.map(x => DOW_SHORT[x]).join(", ") : "Every day";
+      }
+      default: return "Every day";
+    }
+  }
+  function nextScheduled(h) {
+    const d = new Date(); d.setHours(0, 0, 0, 0);
+    for (let i = 1; i <= 14; i++) {
+      d.setDate(d.getDate() + 1);
+      if (scheduledOn(h, isoOf(d))) return i === 1 ? "tomorrow" : DOW_SHORT[d.getDay()];
+    }
+    return "";
+  }
+  function dayPicker(selected, onChange) {
+    const wrap = document.createElement("div"); wrap.className = "day-picker";
+    const sel = new Set(selected || []);
+    for (const dow of [1, 2, 3, 4, 5, 6, 0]) {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = DOW_LETTER[dow];
+      b.title = DOW_SHORT[dow]; b.setAttribute("aria-label", DOW_SHORT[dow]); b.setAttribute("aria-pressed", String(sel.has(dow)));
+      if (sel.has(dow)) b.classList.add("on");
+      b.addEventListener("click", () => {
+        if (sel.has(dow)) sel.delete(dow); else sel.add(dow);
+        b.classList.toggle("on", sel.has(dow)); b.setAttribute("aria-pressed", String(sel.has(dow)));
+        onChange([...sel]);
+      });
+      wrap.append(b);
+    }
+    return wrap;
+  }
+  function repeatSheet(h) {
+    let custom = (h.schedule === "custom" && h.days) ? h.days.slice() : [1, 3, 5];
+    const today = todayInfo().iso;
+    const pick = (schedule, extra = {}) => updateHabit(h, { schedule, days: null, ...extra });
+    const picker = dayPicker(custom, (d) => { custom = d; });
+    const save = document.createElement("button"); save.type = "button"; save.className = "add"; save.textContent = "Save these days";
+    save.style.width = "100%";
+    save.addEventListener("click", () => {
+      if (!custom.length) { toast("Pick at least one day"); return; }
+      closeSheet(); updateHabit(h, { schedule: "custom", days: custom.slice().sort() });
+    });
+    const box = document.createElement("div"); box.append(picker, save);
+    sheet("Repeat “" + h.text + "”", [
+      { icon: "📅", label: "Every day", checked: (h.schedule || "daily") === "daily", run: () => pick("daily") },
+      { icon: "💼", label: "Weekdays (Mon–Fri)", checked: h.schedule === "weekdays", run: () => pick("weekdays") },
+      { icon: "🛋️", label: "Weekends (Sat–Sun)", checked: h.schedule === "weekends", run: () => pick("weekends") },
+      { icon: "↔️", label: "Every other day", sub: "starting today", checked: h.schedule === "alternate", run: () => pick("alternate", { start_date: today }) },
+      { icon: "✏️", label: "Custom days", checked: h.schedule === "custom", sub: h.schedule === "custom" ? repeatLabel(h) : "" },
+      { el: box }
+    ]);
+  }
+
   const habitTimeLabel = (h) => !h.remind ? "No reminder" : to12(h.remind_time || notifyPrefs.notify_time || "08:00");
   function fillHabitTimes(sel, current) {
     sel.replaceChildren();
@@ -2407,10 +2507,16 @@
   }
   function streakOf(id) {
     const days = habitChecks.get(id) || new Set();
+    const h = habits.find(x => x.id === id) || {};
     const d = new Date(); d.setHours(0, 0, 0, 0);
-    if (!days.has(isoOf(d))) d.setDate(d.getDate() - 1);     // not done yet today: count up to yesterday
     let n = 0;
-    while (days.has(isoOf(d))) { n++; d.setDate(d.getDate() - 1); }
+    for (let i = 0; i < 400; i++, d.setDate(d.getDate() - 1)) {
+      const iso = isoOf(d);
+      if (days.has(iso)) { n++; continue; }
+      if (i === 0) continue;                       // today isn't over yet
+      if (!scheduledOn(h, iso)) continue;          // skipped days don't break the streak
+      break;
+    }
     return n;
   }
   const doneToday = (id) => (habitChecks.get(id) || new Set()).has(todayInfo().iso);
@@ -2476,7 +2582,8 @@
     if (error) { toast("Couldn't delete that."); loadHabits(); return; }
     toast("Deleted “" + h.text + "”", async () => {
       const { id, ...rest } = h;
-      await sb.from("habits").insert({ id, text: rest.text, tag: rest.tag, remind: rest.remind, remind_time: rest.remind_time, user_id: habitsUid });
+      await sb.from("habits").insert({ id, text: rest.text, tag: rest.tag, remind: rest.remind, remind_time: rest.remind_time,
+        schedule: rest.schedule || "daily", days: rest.days || null, start_date: rest.start_date || todayInfo().iso, user_id: habitsUid });
       const days = [...(habitChecks.get(id) || [])].map(day => ({ habit_id: id, user_id: habitsUid, day }));
       if (days.length) await sb.from("habit_checks").insert(days);
       loadHabits();
@@ -2520,8 +2627,14 @@
       updateHabit(h, v === "off" ? { remind: false } : { remind: true, remind_time: v || null, last_notified: null });
     });
     rc.append(rs); meta.append(rc);
+    const rp = document.createElement("button"); rp.type = "button"; rp.className = "chip repeat";
+    rp.textContent = "🔁 " + repeatLabel(h) + " ▾"; rp.title = "Change which days";
+    rp.addEventListener("click", (e) => { e.stopPropagation(); repeatSheet(h); });
+    meta.append(rp);
+    if (!scheduledOn(h, todayInfo().iso)) li.classList.add("notday");
     const n = streakOf(h.id);
     if (n > 0) { const st = document.createElement("span"); st.className = "chip streak"; st.textContent = "🔥 " + n + (n === 1 ? " day" : " days"); meta.append(st); }
+    if (!scheduledOn(h, todayInfo().iso)) { const nx = document.createElement("span"); nx.className = "chip streak"; nx.textContent = "Next: " + nextScheduled(h); meta.append(nx); }
     body.append(tx, meta);
     const actions = document.createElement("div"); actions.className = "actions";
     const ed = document.createElement("button"); ed.className = "icon"; ed.textContent = "✎"; ed.title = "Edit"; ed.setAttribute("aria-label", "Edit daily");
@@ -2539,24 +2652,44 @@
     return li;
   }
 
+  let notTodayOpen = false;
+  try { notTodayOpen = localStorage.getItem("todo.notToday") === "1"; } catch (e) {}
   function renderHabits() {
     const list = $("habitList");
     if (!list) return;
-    const total = habits.length, doneN = habits.filter(h => doneToday(h.id)).length;
+    const todayIso = todayInfo().iso;
+    const todays = habits.filter(h => scheduledOn(h, todayIso));
+    const others = habits.filter(h => !scheduledOn(h, todayIso));
+    const total = todays.length, doneN = todays.filter(h => doneToday(h.id)).length;
     // not done first (by reminder time), then done
     const tkey = (h) => h.remind ? (h.remind_time || notifyPrefs.notify_time || "08:00") : "99:99";
-    const sorted = [...habits].sort((a, b) => (doneToday(a.id) - doneToday(b.id)) || (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : a.created_at - b.created_at));
-    list.replaceChildren(...sorted.map(habitEl));
-    $("habitEmpty").hidden = !habitsLoaded || total > 0;
+    const sorted = [...todays].sort((a, b) => (doneToday(a.id) - doneToday(b.id)) || (tkey(a) < tkey(b) ? -1 : tkey(a) > tkey(b) ? 1 : a.created_at - b.created_at));
+    const nodes = sorted.map(habitEl);
+    if (others.length) {
+      const head = document.createElement("li"); head.className = "notday-head" + (notTodayOpen ? "" : " collapsed");
+      head.innerHTML = '<span class="chev">▾</span><span></span>';
+      head.lastChild.textContent = "😌 Not today · " + others.length + (notTodayOpen ? "" : " (they'll show up on their day)");
+      head.addEventListener("click", () => { notTodayOpen = !notTodayOpen; try { localStorage.setItem("todo.notToday", notTodayOpen ? "1" : "0"); } catch (e) {} renderHabits(); });
+      nodes.push(head);
+      if (notTodayOpen) nodes.push(...others.map(habitEl));
+    }
+    list.replaceChildren(...nodes);
+    $("habitEmpty").hidden = !habitsLoaded || habits.length > 0;
     $("dailyProgress").hidden = total === 0;
-    $("dailyProgressText").textContent = doneN === total && total ? "🎉 All " + total + " dailies done today!" : doneN + " of " + total + " dailies done today";
+    $("dailyProgressText").textContent = doneN === total && total ? "🎉 All " + total + " of today's dailies done!" : doneN + " of " + total + " dailies done today";
     $("dailyProgressFill").style.width = (total ? Math.round(100 * doneN / total) : 0) + "%";
-    const left = total - doneN;
+    const left = total - doneN;   // only dailies scheduled for today
     $("dailyBadge").hidden = left === 0;
     $("dailyBadge").textContent = left;
   }
 
   // add a daily
+  let newDays = [1, 3, 5];
+  $("habitRepeat").addEventListener("change", () => {
+    const custom = $("habitRepeat").value === "custom";
+    $("habitDays").hidden = !custom;
+    if (custom && !$("habitDays").firstChild) $("habitDays").append(...dayPicker(newDays, (d) => { newDays = d; }).childNodes);
+  });
   $("habitInput").addEventListener("input", () => { $("habitAdd").disabled = !$("habitInput").value.trim(); });
   $("habitForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -2565,7 +2698,10 @@
     let text = raw, tag = null;
     try { const tg = pickTag(raw); tag = tg.tag; text = tidy(tg.text) || raw; } catch (er) {}
     const tv = $("habitTime").value;
-    const row = { user_id: habitsUid, text, tag, remind: tv !== "off", remind_time: tv && tv !== "off" ? tv : null };
+    const rep2 = $("habitRepeat").value;
+    if (rep2 === "custom" && !newDays.length) { toast("Pick at least one day"); return; }
+    const row = { user_id: habitsUid, text, tag, remind: tv !== "off", remind_time: tv && tv !== "off" ? tv : null,
+      schedule: rep2, days: rep2 === "custom" ? newDays.slice().sort() : null, start_date: todayInfo().iso };
     $("habitAdd").disabled = true;
     const { data, error } = await sb.from("habits").insert(row).select().single();
     if (error) { toast("Couldn't add that. Try again."); $("habitAdd").disabled = false; return; }
