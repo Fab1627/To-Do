@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>To-Do</title>
-<meta name="app-build" content="20261118034442">
+<meta name="app-build" content="20261118034643">
 <meta name="theme-color" content="#f6f5f1">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -301,6 +301,35 @@
   .update-bar button { border: none; border-radius: 10px; font: inherit; cursor: pointer; }
   #updateGo { background: var(--accent-ink); color: var(--accent); font-weight: 700; padding: 7px 14px; }
   .update-x { background: transparent; color: var(--accent-ink); opacity: .8; padding: 6px 8px; }
+  .hdr-left { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+  .hdr-left h1 { white-space: nowrap; }
+  header { align-items: center !important; }
+  .today-count { margin-top: 10px; font-size: 16px; font-weight: 600; color: var(--ink); }
+  .today-count:empty { display: none; }
+  .menu-btn {
+    width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    color: var(--ink); display: grid; place-items: center; cursor: pointer; padding: 0;
+  }
+  .menu-btn:hover { border-color: var(--muted); }
+  .drawer.left { left: 0; right: auto; border-left: none; border-right: 1px solid var(--line); box-shadow: 10px 0 30px rgba(0,0,0,.12); transform: translateX(-105%); }
+  .drawer.left.open { transform: translateX(0); }
+  .mitem {
+    display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 6px; border: none; border-radius: 10px;
+    background: transparent; color: var(--ink); font: inherit; font-size: 16px; text-align: left; cursor: pointer; text-decoration: none;
+  }
+  .mitem:hover, .mitem:active { background: var(--bg); }
+  .mitem > span:first-child { width: 24px; text-align: center; }
+  .msub { margin-left: auto; color: var(--muted); font-size: 14px; }
+  .mrow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 0; font-size: 15px; }
+  .mlabel { display: inline-flex; align-items: center; gap: 8px; }
+  .mval { color: var(--muted); font-size: 14px; }
+  .mval.ok { color: var(--lo); font-weight: 600; }
+  .acct-email { color: var(--ink); font-weight: 600; word-break: break-all; }
+  .mswitch { padding: 10px 6px; }
+  .danger-btn { width: 100%; color: var(--warn); border-color: var(--line); padding: 12px; font-size: 16px; }
+  .help-list { margin: 4px 0 6px; padding-left: 0; list-style: none; font-size: 15px; line-height: 1.5; }
+  .help-list li { padding: 8px 4px; border-top: 1px solid var(--line); }
+  .help-list li:first-child { border-top: none; }
   .hdr-right { display: inline-flex; align-items: center; gap: 10px; }
   .bell {
     position: relative; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line);
@@ -381,6 +410,7 @@
   .auth-sub, .auth-msg, .auth-switch { text-align: center; }
   body.signed-out main { max-width: 640px; }
   body.signed-out header { justify-content: center; }
+  body.signed-out header .menu-btn { display: none; }
   body.signed-out header .count { display: none; }
   @media (max-width: 520px) {
     .auth { margin-top: 10vh; padding: 28px 22px; }
@@ -519,9 +549,13 @@
 <body>
 <main>
   <header>
-    <h1>To-Do</h1>
+    <span class="hdr-left">
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" title="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      </button>
+      <h1>To-Do</h1>
+    </span>
     <span class="hdr-right">
-      <span class="count" id="count"></span>
       <button type="button" class="theme-btn" id="themeBtn" title="Theme" aria-label="Change theme">🎨</button>
       <button type="button" class="bell" id="bellBtn" title="Notifications" aria-label="Notification settings" hidden>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -529,6 +563,7 @@
       </button>
     </span>
   </header>
+  <div class="today-count count" id="count"></div>
   <div class="who" id="who" hidden><span id="whoEmail"></span> · <button class="linkbtn" id="signOut">Sign out</button></div>
 
   <form class="auth" id="auth" hidden autocomplete="on">
@@ -661,6 +696,49 @@
   <span>🔄 An update is available.</span>
   <button type="button" id="updateGo">Refresh</button>
 </div>
+<div class="scrim" id="menuScrim" hidden></div>
+<aside class="drawer left" id="menuDrawer" aria-hidden="true" aria-label="Menu">
+  <div class="drawer-head">
+    <h2>☰ Menu</h2>
+    <button type="button" class="icon" id="menuClose" aria-label="Close menu">✕</button>
+  </div>
+
+  <section class="dsec" id="menuAccount" hidden>
+    <h3>Account</h3>
+    <p class="dnote acct-email" id="menuEmail"></p>
+    <div class="mrow">
+      <span class="mlabel"><svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg> Google</span>
+      <span class="mval" id="googleState">Checking…</span>
+    </div>
+    <div class="drow">
+      <button type="button" class="ghost" id="linkGoogle" hidden>Link Google account</button>
+      <button type="button" class="ghost" id="unlinkGoogle" hidden>Unlink Google</button>
+    </div>
+    <p class="dnote" id="linkMsg"></p>
+  </section>
+
+  <section class="dsec">
+    <h3>Settings</h3>
+    <button type="button" class="mitem" id="menuTheme"><span>🎨</span> Theme <span class="msub" id="menuThemeName"></span></button>
+    <button type="button" class="mitem" id="menuNotif"><span>🔔</span> Notifications</button>
+    <label class="switch-row mswitch">
+      <span>💾 Stay signed in on this device</span>
+      <input type="checkbox" id="menuRemember" class="switch">
+    </label>
+  </section>
+
+  <section class="dsec">
+    <h3>Help &amp; support</h3>
+    <button type="button" class="mitem" id="menuHow"><span>❓</span> How to use To-Do</button>
+    <button type="button" class="mitem" id="menuInstall"><span>📲</span> Add To-Do to your home screen</button>
+    <a class="mitem" href="https://github.com/Fab1627/To-Do/issues/new" target="_blank" rel="noopener"><span>🐞</span> Report a problem or suggest an idea</a>
+    <p class="dnote" id="menuVersion"></p>
+  </section>
+
+  <section class="dsec" id="menuSignOutSec" hidden>
+    <button type="button" class="ghost danger-btn" id="menuSignOut">Sign out</button>
+  </section>
+</aside>
 <div class="scrim" id="scrim" hidden></div>
 <aside class="drawer" id="drawer" aria-hidden="true" aria-label="Notification settings">
   <div class="drawer-head">
@@ -2252,6 +2330,7 @@
     started = true;
     const uid = session.user.id;
     currentUid = uid;
+    menuUser = session.user;
     $("auth").hidden = true;
     $("codeForm").hidden = true;
     document.body.classList.remove("signed-out");
@@ -2492,6 +2571,106 @@
     habits.push(data); $("habitInput").value = ""; renderHabits();
     toast("Added to Dailies: " + text);
   });
+
+  // ================= ☰ Menu =================
+  let menuUser = null;
+  function openMenu(open) {
+    $("menuDrawer").classList.toggle("open", open);
+    $("menuDrawer").setAttribute("aria-hidden", String(!open));
+    $("menuScrim").hidden = !open;
+    if (open) refreshMenu();
+  }
+  $("menuBtn").addEventListener("click", () => openMenu(true));
+  $("menuClose").addEventListener("click", () => openMenu(false));
+  $("menuScrim").addEventListener("click", () => openMenu(false));
+  addEventListener("keydown", (e) => { if (e.key === "Escape") openMenu(false); });
+
+  async function refreshMenu() {
+    const signedIn = !!menuUser;
+    $("menuAccount").hidden = !signedIn;
+    $("menuSignOutSec").hidden = !signedIn;
+    $("menuNotif").hidden = !signedIn;
+    $("menuRemember").checked = remembering();
+    const th = THEMES.find(t => t[0] === (ui.theme || "classic"));
+    $("menuThemeName").textContent = th ? th[1].replace(/ \(.*\)/, "") : "";
+    const meta = document.querySelector('meta[name="app-build"]');
+    $("menuVersion").textContent = "Version " + ((meta && meta.content !== "BUILD") ? meta.content.slice(0, 8).replace(/(\d{4})(\d{2})(\d{2})/, "$2/$3/$1") : "dev");
+    if (!signedIn) return;
+    $("menuEmail").textContent = menuUser.email || "";
+    $("linkMsg").textContent = "";
+    try {
+      const { data, error } = await sb.auth.getUserIdentities();
+      if (error) throw error;
+      const ids = data.identities || [];
+      const g = ids.find(i => i.provider === "google");
+      $("googleState").textContent = g ? "Linked ✓" + (g.identity_data && g.identity_data.email && g.identity_data.email !== menuUser.email ? " (" + g.identity_data.email + ")" : "") : "Not linked";
+      $("googleState").className = "mval" + (g ? " ok" : "");
+      $("linkGoogle").hidden = !!g;
+      $("unlinkGoogle").hidden = !g || ids.length < 2;
+      $("unlinkGoogle").onclick = async () => {
+        $("linkMsg").className = "dnote"; $("linkMsg").textContent = "Unlinking…";
+        const { error: e2 } = await sb.auth.unlinkIdentity(g);
+        if (e2) { $("linkMsg").className = "dnote warn"; $("linkMsg").textContent = "Couldn't unlink: " + e2.message; }
+        else refreshMenu();
+      };
+    } catch (e) {
+      $("googleState").textContent = "Unavailable";
+    }
+  }
+  $("linkGoogle").addEventListener("click", async () => {
+    const m = $("linkMsg");
+    m.className = "dnote"; m.textContent = "Opening Google…";
+    const { error } = await sb.auth.linkIdentity({ provider: "google", options: { redirectTo: location.origin + location.pathname } });
+    if (error) {
+      m.className = "dnote warn";
+      m.textContent = /manual linking/i.test(error.message || "")
+        ? "Linking accounts isn't switched on yet. (Supabase → Authentication → turn on “Allow manual linking”.)"
+        : "Couldn't link Google: " + (error.message || "try again") + ".";
+    }
+  });
+  $("menuTheme").addEventListener("click", () => { openMenu(false); $("themeBtn").click(); });
+  $("menuNotif").addEventListener("click", () => { openMenu(false); openDrawer(true); });
+  $("menuRemember").addEventListener("change", () => {
+    const keep = $("menuRemember").checked;
+    try { localStorage.setItem(REMEMBER_KEY, keep ? "1" : "0"); } catch (e) {}
+    // move the current sign-in to the right place right away
+    const move = (from, to) => {
+      try {
+        for (let i = from.length - 1; i >= 0; i--) {
+          const k = from.key(i);
+          if (k && k.startsWith("sb-")) { to.setItem(k, from.getItem(k)); from.removeItem(k); }
+        }
+      } catch (e) {}
+    };
+    if (keep) move(sessionStorage, localStorage); else move(localStorage, sessionStorage);
+    if ($("rememberMe")) $("rememberMe").checked = keep;
+    toast(keep ? "You'll stay signed in on this device" : "You'll be signed out when you close the app");
+  });
+  $("menuHow").addEventListener("click", () => {
+    openMenu(false);
+    const ul = document.createElement("ul"); ul.className = "help-list";
+    for (const t of [
+      "➕ <b>Add a task</b>: type it or tap 🎙️ and say it. Words like “urgent”, “Friday” or “a week from today” set the importance and date for you.",
+      "✅ <b>Finish a task</b>: tap it (phone) or tick the circle. Tap <i>Undo</i> if it was a mistake.",
+      "✋ <b>Change a task</b>: press and hold it (phone), or tap its importance, 📅 date or 🏷️ tag.",
+      "🔁 <b>Dailies</b>: things to do every day. They reset at midnight and keep a 🔥 streak.",
+      "🔔 <b>Reminders</b>: tap the bell to turn on notifications and pick your daily time.",
+      "🎨 <b>Themes</b>: tap the palette to change colors.",
+      "🔽 <b>Collapse a day</b>: tap its heading. It stays collapsed next time."
+    ]) { const li = document.createElement("li"); li.innerHTML = t; ul.append(li); }
+    sheet("How to use To-Do", [{ el: ul }]);
+  });
+  $("menuInstall").addEventListener("click", () => {
+    openMenu(false);
+    const ul = document.createElement("ul"); ul.className = "help-list";
+    for (const t of [
+      "🍎 <b>iPhone</b>: open this page in <b>Safari</b> → tap Share (□↑) → <b>Add to Home Screen</b> → Add. Open To-Do from the new icon (needed for notifications).",
+      "🤖 <b>Android</b>: open this page in <b>Chrome</b> → tap ⋮ → <b>Install app</b> or <b>Add to Home screen</b>.",
+      "💻 <b>Computer</b>: in Chrome or Edge, click the install icon at the right end of the address bar."
+    ]) { const li = document.createElement("li"); li.innerHTML = t; ul.append(li); }
+    sheet("Add To-Do to your home screen", [{ el: ul }]);
+  });
+  $("menuSignOut").addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); });
 
   // ---- Sign in / create account ----
   function initAuth() {
